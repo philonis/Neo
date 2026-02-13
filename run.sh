@@ -1,1 +1,1 @@
-treamlit run gui_chat.py
+streamlit run gui_chat.py
