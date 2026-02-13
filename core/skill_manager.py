@@ -29,6 +29,18 @@ class SkillManager:
             self.register_skill("notes_operator", NotesSkill.run, NotesSkill.get_tool_definition())
         except ImportError:
             pass # 忽略未安装的模块
+        
+        try:
+            from tools.chat_skill import ChatSkill
+            self.register_skill("chat", ChatSkill.run, ChatSkill.get_tool_definition())
+        except ImportError:
+            pass # 忽略未安装的模块
+        
+        try:
+            from tools.search_skill import SearchSkill
+            self.register_skill("web_search", SearchSkill.run, SearchSkill.get_tool_definition())
+        except ImportError:
+            pass # 忽略未安装的模块
 
     def load_dynamic_skills(self):
         """动态加载 agent_skills 目录下的 .py 文件"""
@@ -79,6 +91,32 @@ class SkillManager:
 
     def get_skill(self, name):
         return self.skills.get(name, {}).get("func")
+
+    def search_skills(self, description):
+        """
+        根据功能描述搜索现有技能
+        
+        :param description: 技能功能描述
+        :return: 匹配的技能列表，按相关性排序
+        """
+        matching_skills = []
+        
+        for skill_name, skill_info in self.skills.items():
+            schema = skill_info.get("schema", {})
+            function_info = schema.get("function", {})
+            skill_description = function_info.get("description", "")
+            
+            # 简单的关键词匹配
+            if any(keyword in skill_description.lower() for keyword in description.lower().split()):
+                matching_skills.append({
+                    "name": skill_name,
+                    "description": skill_description,
+                    "relevance": len(set(description.lower().split()) & set(skill_description.lower().split()))
+                })
+        
+        # 按相关性排序
+        matching_skills.sort(key=lambda x: x["relevance"], reverse=True)
+        return matching_skills
 
     def create_skill_file(self, skill_name, code_content):
         """保存新生成的技能代码"""
