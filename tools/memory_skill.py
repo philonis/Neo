@@ -105,3 +105,7 @@ class PersonalMemorySkill:
     def _clear_file(self, path):
         with open(path, "w", encoding="utf-8") as f:
             f.truncate() # 清空文件内容
+
+    def get_recent_chat(self):
+        """公共方法：获取当前活跃聊天记录"""
+        return self._read_file(self.active_file)

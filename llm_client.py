@@ -3,12 +3,10 @@ import json
 import os
 from dotenv import load_dotenv
 
-# 加载 .env 文件中的环境变量
-load_dotenv() 
+load_dotenv()
 
 class LLMClient:
     def __init__(self, api_key=None, base_url=None, model=None):
-        # 优先级：传入参数 > .env环境变量 > 默认值
         self.api_key = api_key or os.getenv("LLM_API_KEY")
         self.base_url = base_url or os.getenv("LLM_BASE_URL", "https://api.qnaigc.com/v1/chat/completions")
         self.model = model or os.getenv("LLM_MODEL", "deepseek/deepseek-v3.2-251201")
@@ -18,14 +16,15 @@ class LLMClient:
             "Content-Type": "application/json"
         }
 
-    def chat(self, messages, tools=None, stream=False):
+    def chat(self, messages, tools=None, tool_choice="auto", stream=False):
         """
-        发送对话请求
+        发送对话请求，支持原生 Function Calling
         
-        :param messages: 对话历史列表 [{"role": "user", "content": "..."}]
-        :param tools: 工具定义列表 (可选)
-        :param stream: 是否流式输出 (暂未完全实现处理逻辑)
-        :return: 解析后的 JSON 响应
+        :param messages: 对话历史列表
+        :param tools: 工具定义列表 (OpenAI 格式)
+        :param tool_choice: "auto" | "none" | {"type": "function", "function": {"name": "..."}}
+        :param stream: 是否流式输出
+        :return: 解析后的响应
         """
         payload = {
             "stream": stream,
@@ -33,25 +32,58 @@ class LLMClient:
             "messages": messages
         }
 
-        # 如果有传入工具定义，加入 payload
         if tools:
             payload["tools"] = tools
+            payload["tool_choice"] = tool_choice
 
         try:
-            response = requests.post(self.base_url, json=payload, headers=self.headers, timeout=60)
-            response.raise_for_status() # 检查 HTTP 错误
+            response = requests.post(self.base_url, json=payload, headers=self.headers, timeout=120)
+            response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"[LLM Client Error] 请求失败: {e}")
             return None
         except json.JSONDecodeError:
-            print(f"[LLM Client Error] 响应解析失败: {response.text}")
+            print(f"[LLM Client Error] 响应解析失败")
             return None
 
+    def chat_with_tools(self, messages, tools, max_tool_calls=10):
+        """
+        高级封装：自动处理工具调用循环
+        
+        :param messages: 对话历史
+        :param tools: 可用工具列表
+        :param max_tool_calls: 最大工具调用次数
+        :return: (final_response, tool_call_history)
+        """
+        tool_call_history = []
+        
+        for _ in range(max_tool_calls):
+            response = self.chat(messages, tools=tools, tool_choice="auto")
+            
+            if not response:
+                return None, tool_call_history
+            
+            message = response["choices"][0]["message"]
+            
+            if "tool_calls" in message and message["tool_calls"]:
+                messages.append(message)
+                
+                for tool_call in message["tool_calls"]:
+                    tool_call_history.append({
+                        "id": tool_call["id"],
+                        "name": tool_call["function"]["name"],
+                        "arguments": json.loads(tool_call["function"]["arguments"])
+                    })
+                
+                return response, tool_call_history
+            
+            messages.append(message)
+            return response, tool_call_history
+        
+        return None, tool_call_history
+
     def simple_chat(self, user_content, system_prompt="You are a helpful assistant."):
-        """
-        简单对话封装，适合不需要工具的快速调用
-        """
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content}
@@ -62,11 +94,20 @@ class LLMClient:
             return result["choices"][0]["message"]["content"]
         return None
 
-# --- 模块测试代码 ---
-if __name__ == "__main__":
-    # 测试：直接运行此文件
-    client = LLMClient()
-    
-    print("正在进行简单对话测试...")
-    reply = client.simple_chat("你好，请用一句话介绍你自己。")
-    print(f"模型回复: {reply}")
+    def extract_response_content(self, response):
+        if not response or "choices" not in response:
+            return None
+        message = response["choices"][0]["message"]
+        return message.get("content")
+
+    def extract_tool_calls(self, response):
+        if not response or "choices" not in response:
+            return []
+        message = response["choices"][0]["message"]
+        return message.get("tool_calls", [])
+
+    def has_tool_calls(self, response):
+        if not response:
+            return False
+        tool_calls = self.extract_tool_calls(response)
+        return len(tool_calls) > 0
