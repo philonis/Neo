@@ -299,7 +299,15 @@ if prompt := st.chat_input("请输入指令..."):
                 placeholder.markdown(final_reply)
                 st.session_state.messages.append({"role": "assistant", "content": final_reply})
             else:
-                placeholder.markdown("任务执行结束。")
+                # 回退机制：如果技能执行失败，使用聊天模式生成回复
+                placeholder.markdown("🤔 正在生成回复...")
+                fallback_response = client.chat(st.session_state.messages)
+                if fallback_response:
+                    final_reply = fallback_response["choices"][0]["message"]["content"]
+                    placeholder.markdown(final_reply)
+                    st.session_state.messages.append({"role": "assistant", "content": final_reply})
+                else:
+                    placeholder.markdown("抱歉，我遇到了一些问题，请稍后再试。")
 
     # --- 5. 记忆更新 ---
     if final_reply:
