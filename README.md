@@ -5,67 +5,78 @@
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python Version">
   <img src="https://img.shields.io/badge/Platform-macOS-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
+  <img src="https://img.shields.io/badge/Architecture-ReAct-orange" alt="Architecture">
 </div>
 
-**Neo** 是一个运行在本地 macOS 上的智能助手框架。与传统 AI 助手不同，Neo 具备**规划式任务执行**、**长期记忆**以及**自我编程进化**的能力。
+**Neo** 是一个基于 ReAct 架构的本地智能助手框架。与传统 AI 助手不同，Neo 具备**思考-行动-观察循环**、**原生 Function Calling**、**向量记忆系统**以及**自我编程进化**的能力。
 
-它不仅仅是一个聊天机器人，更是一个能够通过编写代码来扩展自身能力的数字生命。
+它不仅仅是一个聊天机器人，更是一个能够自主规划、执行、反思并扩展自身能力的数字生命。
 
 ## ✨ 核心特性
 
-- **🧠 智能规划式架构**: 
-  Neo 在执行复杂任务前会先生成计划，能够拆解任务、评估工具可用性，而不是简单的"提示-响应"模式。
-  采用优先级策略：优先使用现有工具 → 使用聊天工具处理开放性问题 → 仅在必要时创建新技能。
-  
-- **🛠️ 动态技能生成与复用**: 
-  当发现自身能力不足时（如"无法查询实时天气"），Neo 会自动编写 Python 代码、保存并在无需重启的情况下加载新技能，实现自我进化。
-  同时具备技能发现机制，避免重复创建功能相似的技能。
+### 🧠 ReAct 架构
+Neo 采用 ReAct (Reasoning + Acting) 模式工作：
+- **Thought**: 分析当前状态，思考下一步
+- **Action**: 选择并执行工具
+- **Observation**: 观察执行结果
+- **Loop**: 循环直到任务完成
 
-- **💬 通用聊天工具**: 
-  内置聊天工具，能够智能处理开放性问题、旅行建议、生活建议、创意生成等不需要特定功能的任务，避免不必要的技能创建。
+这种架构使 Neo 能够自我修正、动态调整策略，而不是盲目执行预设计划。
 
-- **🔍 网络搜索能力**: 
-  内置网络搜索工具，支持实时信息查询，帮助用户获取最新数据。
+### ⚡ 原生 Function Calling
+- 直接利用 LLM 的工具调用能力
+- 无需手动解析 JSON 格式
+- 更可靠的工具调用体验
+- 支持多工具并行调用
 
-- **🧬 双子星记忆系统**: 
-  - **Memory (对他人的认知)**: 记录用户偏好、历史对话摘要，通过"记忆蒸馏"压缩上下文。
-  - **Soul (对自我的认知)**: 独立的"灵魂"模块，记录 Neo 的性格特质、价值观演变，使其具备稳定且独特的人格。
+### 🎯 智能任务规划
+- **任务复杂度分析**: 自动判断任务是否需要分解
+- **子任务拆分**: 将复杂任务分解为可执行步骤
+- **动态调整**: 根据执行结果实时调整计划
 
-- **🔄 智能回退机制**: 
-  当技能执行失败时，系统会自动回退到聊天模式，确保用户始终能得到有意义的回复，而不是显示"任务执行结束"。
+### 💾 向量记忆系统
+- **短期记忆**: 最近对话，快速访问
+- **长期记忆**: 重要信息，持久存储
+- **语义检索**: 基于关键词的相关性搜索
+- **自动压缩**: 定期总结和精简记忆
 
-- **🔒 本地优先**: 
-  数据存储在本地文件系统（`memory/`, `soul/`, `agent_skills/`），保护隐私，无需联网即可使用核心能力（LLM API 除外）。
+### 🛠️ 动态技能生成
+当发现自身能力不足时，Neo 会自动编写 Python 代码、保存并加载新技能，实现自我进化。
 
-- **🖥️ 双模式交互**: 
-  提供强大的命令行界面 和 简洁的 Web 界面，均支持 Markdown 渲染与工具调用可视化。
+### 🔍 语义技能搜索
+基于语义相似度匹配技能，"写笔记" 和 "记录备忘录" 能够正确匹配。
+
+### 🔒 本地优先
+数据存储在本地文件系统，保护隐私，无需联网即可使用核心能力。
 
 ## 📁 项目结构
 
 ```
 Neo/
-├── chat_cli.py           # 主入口：命令行交互模式
-├── app.py                # Web UI 模式
-├── llm_client.py         # LLM 统一调用客户端 (支持 OpenAI 兼容接口)
-├── core/
-│   └── skill_manager.py  # 核心引擎：技能加载、动态注册、生命周期管理、技能发现
-├── tools/                # 系统级内置技能
+├── app.py                  # Streamlit Web 界面
+├── chat_cli.py             # 命令行交互模式
+├── llm_client.py           # LLM 客户端 (支持原生 Function Calling)
+├── core/                   # 核心模块
 │   ├── __init__.py
-│   ├── notes_skill.py    # 备忘录操作 (读写追加)
-│   ├── chat_skill.py     # 通用聊天工具 (处理开放性问题)
-│   ├── search_skill.py   # 网络搜索工具 (实时信息查询)
-│   ├── memory_skill.py   # 记忆管理 (存储与蒸馏)
-│   └── soul_skill.py     # 灵魂管理 (人格进化)
-├── agent_skills/         # 【自动生成】Neo 自行编写的技能存放目录
-├── memory/               # 【数据】用户记忆存储目录
-└── soul/                 # 【数据】Neo 人格数据目录
+│   ├── react_agent.py      # ReAct Agent 核心
+│   ├── planner.py          # 智能任务规划器
+│   ├── memory.py           # 向量记忆系统
+│   └── skill_manager.py    # 增强型技能管理器
+├── tools/                  # 系统级内置技能
+│   ├── notes_skill.py      # 备忘录操作
+│   ├── chat_skill.py       # 通用聊天工具
+│   ├── search_skill.py     # 网络搜索工具
+│   ├── memory_skill.py     # 记忆管理
+│   └── soul_skill.py       # 人格进化
+├── agent_skills/           # 动态生成的技能
+├── memory/                 # 记忆数据存储
+├── soul/                   # 人格数据存储
+└── test_system.py          # 系统测试脚本
 ```
 
 ## 🚀 快速开始
 
 ### 1. 环境准备
-
-确保你的系统已安装 Python 3.10+。
 
 ```bash
 # 克隆项目
@@ -90,106 +101,142 @@ requests
 
 ### 2. 配置 API Key
 
-Neo 需要一个大模型作为“大脑”。你可以使用 OpenAI 或任何兼容 OpenAI 接口的服务（如 DeepSeek, QNAIGC 等）。
-
-创建 `.env` 文件或在终端中设置环境变量：
+创建 `.env` 文件：
 
 ```bash
-export LLM_API_KEY="your-api-key-here"
-export LLM_BASE_URL="https://api.openai.com/v1/chat/completions" # 可选，默认为 OpenAI
-export LLM_MODEL="gpt-4o" # 推荐 gpt-4o 或 deepseek-chat
+LLM_API_KEY="your-api-key-here"
+LLM_BASE_URL="https://api.openai.com/v1/chat/completions"
+LLM_MODEL="gpt-4o"
 ```
+
+支持任何兼容 OpenAI 接口的服务（DeepSeek, QNAIGC 等）。
 
 ### 3. 启动 Neo
 
-**命令行模式 (推荐开发调试):**
-```bash
-python chat_cli.py
-```
-
-**Web 模式 (推荐日常使用):**
+**Web 模式 (推荐):**
 ```bash
 streamlit run app.py
 ```
 
+**命令行模式:**
+```bash
+python chat_cli.py
+```
+
+**运行测试:**
+```bash
+python test_system.py
+```
+
 ## 💡 使用指南
 
-### 智能意图识别
-Neo 具备智能意图识别能力：
-- **闲聊模式**：对于简单的问候、旅行建议、生活建议、开放性问题等，直接回复，不消耗规划算力
-- **任务模式**：对于需要文件操作、数据查询、系统设置等具体任务，进入规划模式
+### ReAct 执行流程
 
-### 优先级策略
-Neo 采用智能优先级策略处理任务：
-1. **优先使用现有工具**：充分利用已有的工具完成任务
-2. **使用聊天工具**：对于开放性问题，使用内置聊天工具直接回答
-3. **创建新技能**：仅在现有工具无法满足时才创建新技能
-
-### 示例：智能任务处理
-
-**场景 1：开放性问题**
 ```
-用户: "怎么从北京到上海呢？"
-Neo: 直接使用聊天工具，提供详细的交通方式建议（高铁、飞机等）
+用户输入: "帮我创建一个购物清单备忘录"
+    ↓
+🧠 Thought: 用户想要创建备忘录，我需要使用 notes_operator 工具
+    ↓
+⚡ Action: 调用 notes_operator(action="create", title="购物清单")
+    ↓
+👁️ Observation: 备忘录创建成功
+    ↓
+🧠 Thought: 任务完成，向用户确认
+    ↓
+✅ 回复: "已为您创建购物清单备忘录"
 ```
 
-**场景 2：需要新技能的任务**
+### 示例对话
+
+**简单任务:**
 ```
-用户: "帮我查一下北京明天的天气。"
-Neo (规划): "我发现我没有天气查询工具。"
-Neo (行动): "是否尝试自动编写该技能？"
-用户: "y"
-Neo (编程): 生成 `auto_skill_xxxx.py`，自动安装并加载。
-Neo (反馈): "我已经学会了查天气，请再试一次。"
-用户: "查北京天气。"
-Neo (执行): 调用新技能，返回结果。
+用户: 你好
+Neo: 你好！我是 Neo，有什么可以帮助你的吗？
 ```
 
-**场景 3：技能复用**
+**工具调用:**
 ```
-用户: "查一下上海的天气。"
-Neo: 发现已有天气查询技能，直接使用，无需重新创建。
+用户: 帮我创建一个叫"今日待办"的备忘录
+Neo: [调用 notes_operator 工具]
+    已为您创建备忘录"今日待办"，您可以开始添加内容了。
 ```
 
-### 记忆与人格
+**复杂任务 (自动分解):**
+```
+用户: 帮我创建一个购物清单，然后搜索一下附近的超市
+Neo: [分析任务复杂度: medium]
+    [分解为子任务]
+    1. 创建购物清单备忘录 ✓
+    2. 搜索附近超市信息 ✓
+    已完成两项任务...
+```
 
-*   **记忆积累**: 与 Neo 聊得越多，它越了解你。当对话积累到一定程度，它会自动提炼关键信息存入长期记忆。
-*   **人格进化**: 每 10 轮对话，Neo 会进行一次“灵魂内省”，反思自己的说话风格和价值观，可能会变得更加幽默或严谨。
+### 记忆系统
+
+Neo 会记住与你的对话：
+
+```
+用户: 我喜欢喝咖啡
+Neo: 好的，我记住了。
+
+[10轮对话后]
+
+用户: 给我推荐点喝的
+Neo: 根据您的偏好，我推荐您尝试...
+```
 
 ## 🛠️ 开发新技能
 
-你可以手动为 Neo 编写技能，只需遵循以下规范：
+在 `tools/` 目录下创建技能文件：
 
-1.  在 `tools/` 目录下创建 `my_skill.py`。
-2.  实现 `run(arguments: dict)` 函数。
-3.  实现 `get_tool_definition()` 函数，返回 OpenAI Tool Schema。
-4.  重启 Neo，技能将自动加载。
-
-**示例 Schema:**
 ```python
-def get_tool_definition():
-    return {
-        "type": "function",
-        "function": {
-            "name": "my_skill",
-            "description": "这是一个示例技能",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "input": {"type": "string", "description": "输入文本"}
-                },
-                "required": ["input"]
+class MySkill:
+    @staticmethod
+    def get_tool_definition():
+        return {
+            "type": "function",
+            "function": {
+                "name": "my_skill",
+                "description": "技能描述，用于语义搜索匹配",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "input": {
+                            "type": "string",
+                            "description": "输入参数描述"
+                        }
+                    },
+                    "required": ["input"]
+                }
             }
         }
-    }
+
+    @staticmethod
+    def run(arguments: dict):
+        input_value = arguments.get("input", "")
+        # 实现技能逻辑
+        return {
+            "status": "success",
+            "message": "执行结果"
+        }
 ```
+
+## 📊 架构对比
+
+| 特性 | 旧版 Neo | 新版 Neo |
+|-----|---------|---------|
+| 执行模式 | 单次规划执行 | ReAct 循环 |
+| 工具调用 | 手动解析 JSON | 原生 Function Calling |
+| 错误处理 | 简单重试 | 观察-调整-重试 |
+| 记忆系统 | 文件存储 | 向量检索 + 压缩 |
+| 技能搜索 | 关键词匹配 | 语义相似度 |
 
 ## ⚠️ 注意事项
 
-*   **权限**: 操作备忘录和读取 iMessage 数据库需要 macOS 的“完全磁盘访问”权限。如果功能异常，请在 `系统设置 -> 隐私与安全性` 中为 Terminal 或 Python 解释器授权。
-*   **Token 消耗**: 规划模式和记忆压缩会额外消耗 Token，建议使用成本较低的强力模型（如 GPT-4o-mini 或 DeepSeek）。
+- **权限**: 操作备忘录需要 macOS 的"完全磁盘访问"权限
+- **Token 消耗**: ReAct 循环可能多次调用 LLM，建议使用性价比高的模型
+- **迭代限制**: 默认最多 15 次迭代，防止无限循环
 
 ## 📜 License
 
 MIT License
-```
