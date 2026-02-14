@@ -1,0 +1,16 @@
+# Neo 智能助手依赖
+
+# 核心依赖
+requests>=2.28.0
+openai>=1.0.0
+streamlit>=1.28.0
+
+# 向量存储和记忆
+numpy>=1.24.0
+
+# Browser Agent - 浏览器自动化
+playwright>=1.40.0
+
+# Desktop Agent - macOS应用自动化（可选）
+# atomacos>=1.0.0  # UI自动化增强（需要辅助功能权限）
+# pyobjc-core>=9.0  # macOS原生API（可选）

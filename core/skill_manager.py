@@ -43,6 +43,11 @@ class SkillManager:
             ("tools.http_skill", "HttpSkill", "http_request"),
             ("tools.http_skill", "RssSkill", "rss_fetcher"),
             ("tools.http_skill", "WebScraperSkill", "web_scraper"),
+            ("browser_agent.browser_skill", "BrowserSkill", "browser_agent"),
+            ("browser_agent.browser_skill", "BrowserCredentialSkill", "browser_agent_save_credentials"),
+            ("browser_agent.browser_skill", "BrowserListSitesSkill", "browser_agent_list_sites"),
+            ("desktop_agent.desktop_skill", "DesktopSkill", "desktop_agent"),
+            ("desktop_agent.desktop_skill", "DesktopAppListSkill", "desktop_list_common_apps"),
         ]
         
         for module_path, class_name, default_name in static_skills:
