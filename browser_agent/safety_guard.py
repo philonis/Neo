@@ -45,12 +45,15 @@ class SafetyGuard:
     
     SAFE_OPERATIONS = {
         "navigate", "read", "scroll", "screenshot", 
-        "extract", "wait", "get_title", "get_url"
+        "extract", "wait", "get_title", "get_url",
+        "launch", "activate", "is_running", "list_apps",
+        "get_elements", "get_dom", "check_login"
     }
     
     CONFIRM_REQUIRED_OPERATIONS = {
         "click", "fill", "login", "search", 
-        "submit", "select", "upload"
+        "submit", "select", "upload", "type",
+        "hotkey", "clear_and_type", "click_at", "select_menu"
     }
     
     FORBIDDEN_OPERATIONS = {

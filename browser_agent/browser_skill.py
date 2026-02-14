@@ -50,22 +50,32 @@ class BrowserSkill:
             "type": "function",
             "function": {
                 "name": "browser_agent",
-                "description": """像真人一样使用浏览器访问网站。适用场景：
+                "description": """像真人一样使用浏览器访问**任何网站**。这是获取网页信息的主要工具。
+
+**重要：当需要访问网站、获取网页内容时，优先使用此工具！**
+
+适用场景：
+- 访问任何网站（小红书、微博、知乎、淘宝、新闻网站等）
 - 网站没有API时获取信息
 - 需要登录才能查看的内容
 - 动态渲染的页面内容
-- 复杂的网页交互流程
+- 搜索引擎搜索
 
 支持的操作：
-- navigate: 导航到URL
+- navigate: 导航到URL（如 https://www.xiaohongshu.com/explore）
 - read: 读取页面内容
 - click: 点击元素
-- fill: 填写输入框
+- fill: 填写输入框（如搜索框）
 - login: 登录网站
 - scroll: 滚动页面
 - screenshot: 截图
 - extract: 提取特定内容
 - get_dom: 获取页面结构
+
+使用示例：
+- 访问小红书热门: navigate("https://www.xiaohongshu.com/explore")
+- 搜索内容: fill搜索框 + click搜索按钮
+- 获取内容: read() 或 extract()
 
 安全说明：敏感操作需要用户确认。""",
                 "parameters": {
