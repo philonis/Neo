@@ -58,7 +58,7 @@ class BrowserController:
         try:
             from playwright.async_api import async_playwright
             
-            self._playwright = await async_playwright.start()
+            self._playwright = await async_playwright().start()
             
             self.browser = await self._playwright.chromium.launch(
                 headless=self.headless,

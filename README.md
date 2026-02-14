@@ -1,5 +1,5 @@
 
-# Neo: 本地自进化智能助手
+# Neo: 本地自进化智能助手 / Local Self-Evolving AI Assistant
 
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python Version">
@@ -9,13 +9,20 @@
   <img src="https://img.shields.io/badge/AI-Agentic-purple" alt="Agentic AI">
 </div>
 
+[中文](#中文) | [English](#english)
+
+---
+
+<a name="中文"></a>
+## 🇨🇳 中文
+
 **Neo** 是一个基于 ReAct 架构的本地智能助手框架。与传统 AI 助手不同，Neo 具备**思考-行动-观察循环**、**原生 Function Calling**、**向量记忆系统**以及**自主编程进化**的能力。
 
 它不仅仅是一个聊天机器人，更是一个能够自主规划、执行、反思并**编写代码扩展自身能力**的数字生命。
 
-## ✨ 核心特性
+### ✨ 核心特性
 
-### 🧠 ReAct 架构
+#### 🧠 ReAct 架构
 Neo 采用 ReAct (Reasoning + Acting) 模式工作：
 - **Thought**: 分析当前状态，思考下一步
 - **Action**: 选择并执行工具
@@ -24,7 +31,7 @@ Neo 采用 ReAct (Reasoning + Acting) 模式工作：
 
 这种架构使 Neo 能够自我修正、动态调整策略，而不是盲目执行预设计划。
 
-### 🌐 Browser Agent ⭐ NEW
+#### 🌐 Browser Agent
 Neo 具备**像真人一样使用浏览器**的能力：
 - 自动导航、点击、填表、登录
 - 处理动态渲染的页面
@@ -32,27 +39,27 @@ Neo 具备**像真人一样使用浏览器**的能力：
 - 安全护栏保护敏感操作
 - 支持凭证加密存储
 
-### 💻 Desktop Agent ⭐ NEW
+#### 💻 Desktop Agent
 Neo 可以**像真人一样操作macOS应用**：
 - 启动和激活本地应用（豆包、微信、Safari等）
 - 在应用中输入文本、点击按钮
 - 发送快捷键、读取窗口内容
 - 支持40+常用应用
 
-### 🔧 自主编程能力
+#### 🔧 自主编程能力
 Neo 具备**自我编程进化**的能力：
 - 当发现现有工具无法完成任务时，自动编写新技能
 - 新技能创建后立即可用，无需重启
 - 支持链式调用：搜索 → 获取数据 → 解析 → 返回结果
 - 不会轻易说"无法完成"，而是主动尝试解决问题
 
-### ⚡ 原生 Function Calling
+#### ⚡ 原生 Function Calling
 - 直接利用 LLM 的工具调用能力
 - 无需手动解析 JSON 格式
 - 更可靠的工具调用体验
 - 支持多工具并行调用
 
-### 🛠️ 丰富的内置工具
+#### 🛠️ 丰富的内置工具
 | 工具 | 功能 |
 |-----|------|
 | `browser_agent` | 🌐 像真人一样使用浏览器 |
@@ -67,16 +74,22 @@ Neo 具备**自我编程进化**的能力：
 | `chat` | 💬 通用聊天 |
 | `create_skill` | 🔧 动态创建新技能 |
 
-### 💾 向量记忆系统
+#### 💾 向量记忆系统
 - **短期记忆**: 最近对话，快速访问
 - **长期记忆**: 重要信息，持久存储
 - **语义检索**: 基于关键词的相关性搜索
 - **自动压缩**: 定期总结和精简记忆
 
-### 🔒 本地优先
+#### 🎵 富媒体渲染
+- 自动检测并渲染图片
+- 音频播放器（支持 MP3、播客、Spotify、Apple Podcasts 等）
+- 地图显示
+- 数据可视化图表
+
+#### 🔒 本地优先
 数据存储在本地文件系统，保护隐私，无需联网即可使用核心能力。
 
-## 📁 项目结构
+### 📁 项目结构
 
 ```
 Neo/
@@ -114,9 +127,9 @@ Neo/
 └── test_system.py          # 系统测试脚本
 ```
 
-## 🚀 快速开始
+### 🚀 快速开始
 
-### 1. 环境准备
+#### 1. 环境准备
 
 ```bash
 # 克隆项目
@@ -138,9 +151,10 @@ streamlit
 requests
 numpy
 playwright>=1.40.0
+beautifulsoup4
 ```
 
-### 2. 配置 API Key
+#### 2. 配置 API Key
 
 创建 `.env` 文件：
 
@@ -152,7 +166,7 @@ LLM_MODEL="gpt-4o"
 
 支持任何兼容 OpenAI 接口的服务（DeepSeek, QNAIGC 等）。
 
-### 3. 启动 Neo
+#### 3. 启动 Neo
 
 **Web 模式 (推荐):**
 ```bash
@@ -169,9 +183,9 @@ python chat_cli.py
 python test_system.py
 ```
 
-## 💡 使用指南
+### 💡 使用指南
 
-### Browser Agent 示例 ⭐ NEW
+#### Browser Agent 示例
 
 **场景：访问需要登录的网站**
 ```
@@ -190,20 +204,7 @@ Neo:
   ✅ 回复: 最新帖子列表如下...
 ```
 
-**保存凭证供自动登录：**
-```
-用户: 保存这个网站的登录凭证
-
-Neo:
-  ⚡ Action: browser_agent_save_credentials(
-      site_url="https://example.com",
-      username="my_username",
-      password="my_password"
-    )
-  ✅ 回复: 凭证已加密保存，下次访问时自动登录
-```
-
-### Desktop Agent 示例 ⭐ NEW
+#### Desktop Agent 示例
 
 **场景：打开豆包并对话**
 ```
@@ -216,31 +217,10 @@ Neo:
   ⚡ Action: desktop_agent(action="type", text="今天天气怎么样")
   👁️ Observation: 已输入文本
   ⚡ Action: desktop_agent(action="hotkey", key="enter")
-  👁️ Observation: 已发送
-  ⚡ Action: desktop_agent(action="read")
   ✅ 回复: 豆包回复：今天天气...
 ```
 
-**支持的常用应用：**
-```
-豆包、微信、Safari、Chrome、音乐、备忘录、日历、
-访达、终端、计算器、邮件、地图、飞书、钉钉...
-```
-
-### 自主编程示例
-
-**场景：查询播客最新一期**
-```
-用户: 津津乐道的最新单集是什么？
-
-Neo:
-  🧠 Thought: 我需要获取播客信息，但没有现成的工具...
-  ⚡ Action: web_search(query="津津乐道播客 RSS")
-  👁️ Observation: 找到 RSS 地址
-  ⚡ Action: rss_fetcher(url="https://...")
-  👁️ Observation: 获取到最新一期信息
-  ✅ 回复: 津津乐道最新一期是"xxx"，发布于...
-```
+#### 自主编程示例
 
 **场景：需要创建新技能**
 ```
@@ -259,23 +239,7 @@ Neo:
   ✅ 回复: 比特币当前价格是 $67,234
 ```
 
-### ReAct 执行流程
-
-```
-用户输入: "帮我创建一个购物清单备忘录"
-    ↓
-🧠 Thought: 用户想要创建备忘录，我需要使用 notes_operator 工具
-    ↓
-⚡ Action: 调用 notes_operator(action="create", title="购物清单")
-    ↓
-👁️ Observation: 备忘录创建成功
-    ↓
-🧠 Thought: 任务完成，向用户确认
-    ↓
-✅ 回复: "已为您创建购物清单备忘录"
-```
-
-## 🛡️ 安全护栏
+### 🛡️ 安全护栏
 
 Browser Agent 和 Desktop Agent 都内置了安全护栏：
 
@@ -289,13 +253,7 @@ Browser Agent 和 Desktop Agent 都内置了安全护栏：
     └── payment, delete, publish, modify_settings
 ```
 
-- 敏感操作需要用户确认
-- 行为审计日志记录所有操作
-- 凭证加密存储
-
-## 🛠️ 开发新技能
-
-### 手动创建技能
+### 🛠️ 开发新技能
 
 在 `tools/` 目录下创建技能文件：
 
@@ -307,14 +265,11 @@ class MySkill:
             "type": "function",
             "function": {
                 "name": "my_skill",
-                "description": "技能描述，用于语义搜索匹配",
+                "description": "技能描述",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "input": {
-                            "type": "string",
-                            "description": "输入参数描述"
-                        }
+                        "input": {"type": "string", "description": "输入参数"}
                     },
                     "required": ["input"]
                 }
@@ -323,33 +278,10 @@ class MySkill:
 
     @staticmethod
     def run(arguments: dict):
-        input_value = arguments.get("input", "")
-        # 实现技能逻辑
-        return {
-            "status": "success",
-            "message": "执行结果"
-        }
+        return {"status": "success", "message": "执行结果"}
 ```
 
-### Neo 自动创建技能
-
-Neo 会在运行时自动创建技能，保存在 `agent_skills/` 目录。
-
-## 📊 架构对比
-
-| 特性 | 旧版 Neo | 新版 Neo |
-|-----|---------|---------|
-| 执行模式 | 单次规划执行 | ReAct 循环 |
-| 工具调用 | 手动解析 JSON | 原生 Function Calling |
-| 错误处理 | 简单重试 | 观察-调整-重试 |
-| 记忆系统 | 文件存储 | 向量检索 + 压缩 |
-| 技能搜索 | 关键词匹配 | 语义相似度 |
-| 自主编程 | ❌ | ✅ 动态创建技能 |
-| 浏览器自动化 | ❌ | ✅ Browser Agent |
-| 应用自动化 | ❌ | ✅ Desktop Agent |
-| 安全护栏 | ❌ | ✅ 操作分级保护 |
-
-## ⚠️ 注意事项
+### ⚠️ 注意事项
 
 - **权限**: 
   - 操作备忘录需要 macOS 的"完全磁盘访问"权限
@@ -357,7 +289,262 @@ Neo 会在运行时自动创建技能，保存在 `agent_skills/` 目录。
   - Browser Agent 需要安装 Playwright
 - **Token 消耗**: ReAct 循环可能多次调用 LLM，建议使用性价比高的模型
 - **迭代限制**: 默认最多 15 次迭代，防止无限循环
-- **技能验证**: 动态创建的技能会经过语法检查，但请谨慎执行
+
+---
+
+<a name="english"></a>
+## 🇺🇸 English
+
+**Neo** is a local AI assistant framework based on the ReAct architecture. Unlike traditional AI assistants, Neo features a **Think-Act-Observe loop**, **native Function Calling**, **vector memory system**, and **self-programming evolution** capabilities.
+
+It's not just a chatbot, but a digital life form capable of autonomous planning, execution, reflection, and **writing code to extend its own abilities**.
+
+### ✨ Core Features
+
+#### 🧠 ReAct Architecture
+Neo works using the ReAct (Reasoning + Acting) pattern:
+- **Thought**: Analyze current state, think about next steps
+- **Action**: Select and execute tools
+- **Observation**: Observe execution results
+- **Loop**: Continue until task completion
+
+This architecture enables Neo to self-correct and dynamically adjust strategies rather than blindly executing pre-designed plans.
+
+#### 🌐 Browser Agent
+Neo can **use browsers like a real human**:
+- Automatic navigation, clicking, form filling, login
+- Handle dynamically rendered pages
+- Extract page content
+- Safety guardrails for sensitive operations
+- Encrypted credential storage
+
+#### 💻 Desktop Agent
+Neo can **operate macOS applications like a real human**:
+- Launch and activate local apps (Doubao, WeChat, Safari, etc.)
+- Input text, click buttons in applications
+- Send hotkeys, read window content
+- Support for 40+ common applications
+
+#### 🔧 Self-Programming Capability
+Neo has the ability to **self-program and evolve**:
+- Automatically writes new skills when existing tools are insufficient
+- New skills are immediately available without restart
+- Supports chain calls: search → fetch data → parse → return results
+- Won't easily say "cannot complete", actively tries to solve problems
+
+#### ⚡ Native Function Calling
+- Directly utilizes LLM's tool calling capability
+- No manual JSON parsing required
+- More reliable tool calling experience
+- Supports parallel multi-tool calls
+
+#### 🛠️ Rich Built-in Tools
+| Tool | Function |
+|-----|----------|
+| `browser_agent` | 🌐 Use browsers like a human |
+| `browser_agent_save_credentials` | 🔐 Save website login credentials |
+| `desktop_agent` | 💻 Operate macOS apps like a human |
+| `desktop_list_common_apps` | 📱 List supported common apps |
+| `notes_operator` | 📝 macOS Notes operations |
+| `web_search` | 🔍 Web search |
+| `http_request` | 🌍 HTTP requests, fetch web/API data |
+| `rss_fetcher` | 📡 RSS/Atom feed parsing |
+| `web_scraper` | 📄 Web content extraction |
+| `chat` | 💬 General chat |
+| `create_skill` | 🔧 Dynamically create new skills |
+
+#### 💾 Vector Memory System
+- **Short-term Memory**: Recent conversations, quick access
+- **Long-term Memory**: Important information, persistent storage
+- **Semantic Retrieval**: Keyword-based relevance search
+- **Auto Compression**: Periodic summarization and memory refinement
+
+#### 🎵 Rich Media Rendering
+- Auto-detect and render images
+- Audio players (supports MP3, podcasts, Spotify, Apple Podcasts, etc.)
+- Map display
+- Data visualization charts
+
+#### 🔒 Local-First
+Data stored in local file system, protecting privacy, core capabilities work offline.
+
+### 🚀 Quick Start
+
+#### 1. Environment Setup
+
+```bash
+# Clone the project
+git clone <your-repo-url>
+cd Neo
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install Playwright browser (for Browser Agent)
+pip install playwright
+playwright install chromium
+```
+
+Dependencies (`requirements.txt`):
+```text
+openai
+streamlit
+requests
+numpy
+playwright>=1.40.0
+beautifulsoup4
+```
+
+#### 2. Configure API Key
+
+Create a `.env` file:
+
+```bash
+LLM_API_KEY="your-api-key-here"
+LLM_BASE_URL="https://api.openai.com/v1/chat/completions"
+LLM_MODEL="gpt-4o"
+```
+
+Supports any OpenAI-compatible service (DeepSeek, QNAIGC, etc.).
+
+#### 3. Start Neo
+
+**Web Mode (Recommended):**
+```bash
+streamlit run app.py
+```
+
+**CLI Mode:**
+```bash
+python chat_cli.py
+```
+
+**Run Tests:**
+```bash
+python test_system.py
+```
+
+### 💡 Usage Guide
+
+#### Browser Agent Example
+
+**Scenario: Access a website requiring login**
+```
+User: Check the latest posts on a forum
+
+Neo:
+  🧠 Thought: Need to access the website...
+  ⚡ Action: browser_agent(action="navigate", url="https://example.com")
+  👁️ Observation: Page loaded, login required
+  🧠 Thought: Need user confirmation
+  ❓ Ask: Login required, continue?
+  [User confirms]
+  ⚡ Action: browser_agent(action="login")
+  👁️ Observation: Login successful
+  ⚡ Action: browser_agent(action="extract")
+  ✅ Response: Latest posts are...
+```
+
+#### Desktop Agent Example
+
+**Scenario: Open an app and interact**
+```
+User: Open Notes and create a shopping list
+
+Neo:
+  🧠 Thought: Need to launch Notes...
+  ⚡ Action: desktop_agent(action="launch", app_name="Notes")
+  👁️ Observation: Notes launched
+  ⚡ Action: desktop_agent(action="type", text="Shopping List")
+  ⚡ Action: desktop_agent(action="hotkey", key="enter")
+  ✅ Response: Shopping list created
+```
+
+#### Self-Programming Example
+
+**Scenario: Need to create a new skill**
+```
+User: Check the current Bitcoin price
+
+Neo:
+  🧠 Thought: I don't have a Bitcoin price tool, need to create one...
+  ⚡ Action: create_skill(
+      skill_name="bitcoin_price",
+      skill_description="Query real-time Bitcoin price",
+      skill_code="..."
+    )
+  👁️ Observation: Skill created successfully!
+  ⚡ Action: bitcoin_price()
+  👁️ Observation: Current price $67,234
+  ✅ Response: Bitcoin current price is $67,234
+```
+
+### 🛡️ Safety Guardrails
+
+Both Browser Agent and Desktop Agent have built-in safety guardrails:
+
+```
+Operation Levels:
+├── ✅ Safe Operations (Auto-execute)
+│   └── navigate, read, scroll, screenshot, launch
+├── ⚠️ Confirmation Required
+│   └── click, fill, login, type, hotkey
+└── ❌ Prohibited Operations
+    └── payment, delete, publish, modify_settings
+```
+
+### 🛠️ Developing New Skills
+
+Create a skill file in the `tools/` directory:
+
+```python
+class MySkill:
+    @staticmethod
+    def get_tool_definition():
+        return {
+            "type": "function",
+            "function": {
+                "name": "my_skill",
+                "description": "Skill description",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "input": {"type": "string", "description": "Input parameter"}
+                    },
+                    "required": ["input"]
+                }
+            }
+        }
+
+    @staticmethod
+    def run(arguments: dict):
+        return {"status": "success", "message": "Result"}
+```
+
+### ⚠️ Notes
+
+- **Permissions**: 
+  - Notes operations require "Full Disk Access" on macOS
+  - Desktop Agent requires "Accessibility" permission
+  - Browser Agent requires Playwright installation
+- **Token Consumption**: ReAct loop may call LLM multiple times, recommend cost-effective models
+- **Iteration Limit**: Default max 15 iterations to prevent infinite loops
+
+---
+
+## 📊 Architecture Comparison
+
+| Feature | Old Neo | New Neo |
+|---------|---------|---------|
+| Execution Mode | Single plan execution | ReAct Loop |
+| Tool Calling | Manual JSON parsing | Native Function Calling |
+| Error Handling | Simple retry | Observe-Adjust-Retry |
+| Memory System | File storage | Vector retrieval + Compression |
+| Skill Search | Keyword matching | Semantic similarity |
+| Self-Programming | ❌ | ✅ Dynamic skill creation |
+| Browser Automation | ❌ | ✅ Browser Agent |
+| App Automation | ❌ | ✅ Desktop Agent |
+| Safety Guardrails | ❌ | ✅ Operation-level protection |
 
 ## 📜 License
 
