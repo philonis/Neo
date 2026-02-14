@@ -13,6 +13,82 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+def render_audio_players(content: str):
+    show_audio = st.session_state.get('show_audio', True)
+    if not show_audio:
+        return []
+    
+    audio_patterns = [
+        (r'(https?://[^\s<>"{}|\\^`\[\]]+\.(?:mp3|wav|ogg|m4a|aac|flac|wma))', 'direct'),
+        (r'(https?://[^\s<>"{}|\\^`\[\]]+\.podbean\.com[^\s]*)', 'podbean'),
+        (r'(https?://[^\s<>"{}|\\^`\[\]]+\.buzzsprout\.com[^\s]*)', 'buzzsprout'),
+        (r'(https?://open\.spotify\.com/episode/([a-zA-Z0-9]+))', 'spotify'),
+        (r'(https?://podcasts\.apple\.com/[^\s]+)', 'apple'),
+        (r'(https?://www\.soundcloud\.com/[^\s]+)', 'soundcloud'),
+    ]
+    
+    audio_items = []
+    for pattern, audio_type in audio_patterns:
+        matches = re.findall(pattern, content, re.IGNORECASE)
+        for match in matches:
+            if isinstance(match, tuple):
+                url = match[0] if len(match) > 1 else match
+                audio_id = match[1] if len(match) > 1 else None
+            else:
+                url = match
+                audio_id = None
+            audio_items.append((url, audio_type, audio_id))
+    
+    if audio_items:
+        st.divider()
+        st.subheader("🎵 音频播放器")
+        
+        for url, audio_type, audio_id in audio_items[:3]:
+            with st.container():
+                if audio_type == 'direct':
+                    try:
+                        st.audio(url, format="audio/mpeg")
+                        st.caption(f"🎧 {url.split('/')[-1][:50]}")
+                    except Exception:
+                        st.caption(f"🎵 [音频文件]({url})")
+                
+                elif audio_type == 'spotify':
+                    if audio_id:
+                        st.markdown(f"""
+                        <iframe src="https://open.spotify.com/embed/episode/{audio_id}" 
+                                width="100%" height="152" frameborder="0" 
+                                allowtransparency="true" allow="encrypted-media">
+                        </iframe>
+                        """, unsafe_allow_html=True)
+                
+                elif audio_type == 'apple':
+                    st.markdown(f"""
+                    <iframe allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" 
+                            frameborder="0" height="175" 
+                            style="width:100%;overflow:hidden;border-radius:10px;" 
+                            sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+                            src="{url}">
+                    </iframe>
+                    """, unsafe_allow_html=True)
+                
+                elif audio_type in ['podbean', 'buzzsprout']:
+                    try:
+                        st.audio(url, format="audio/mpeg")
+                        st.caption(f"🎙️ 播客音频")
+                    except Exception:
+                        st.markdown(f"🎙️ [播客链接]({url})")
+                
+                elif audio_type == 'soundcloud':
+                    st.markdown(f"""
+                    <iframe width="100%" height="166" scrolling="no" frameborder="no" 
+                            src="https://w.soundcloud.com/player/?url={url}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false">
+                    </iframe>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown("---")
+    
+    return audio_items
+
 def render_rich_content(content: str):
     image_patterns = [
         r'!\[([^\]]*)\]\(([^)]+)\)',
@@ -32,6 +108,8 @@ def render_rich_content(content: str):
     links = re.findall(url_pattern, content)
     
     st.markdown(content)
+    
+    render_audio_players(content)
     
     show_images = st.session_state.get('show_images', True)
     if images and show_images:
@@ -182,6 +260,7 @@ with st.sidebar:
         st.session_state.show_trace = st.checkbox("显示执行轨迹", value=False)
         st.session_state.show_images = st.checkbox("自动显示图片", value=True)
         st.session_state.show_maps = st.checkbox("显示地图", value=True)
+        st.session_state.show_audio = st.checkbox("自动渲染音频播放器", value=True)
     
     st.divider()
     with st.expander("🔧 已加载技能", expanded=False):
@@ -211,6 +290,7 @@ with st.sidebar:
         st.caption("• 发送图片链接可自动展示")
         st.caption("• 查询价格可显示对比图表")
         st.caption("• 勾选执行轨迹查看详情")
+        st.caption("• 音频链接自动渲染播放器")
 
 st.title("🧠 Neo 智能助手")
 st.caption("基于 ReAct 架构 | 原生 Function Calling | 智能记忆系统")

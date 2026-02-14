@@ -13,7 +13,7 @@ class LLMClient:
         
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json; charset=utf-8"
         }
 
     def chat(self, messages, tools=None, tool_choice="auto", stream=False):
@@ -37,7 +37,13 @@ class LLMClient:
             payload["tool_choice"] = tool_choice
 
         try:
-            response = requests.post(self.base_url, json=payload, headers=self.headers, timeout=120)
+            response = requests.post(
+                self.base_url, 
+                data=json.dumps(payload, ensure_ascii=False).encode('utf-8'), 
+                headers=self.headers, 
+                timeout=120
+            )
+            response.encoding = 'utf-8'
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -70,10 +76,15 @@ class LLMClient:
                 messages.append(message)
                 
                 for tool_call in message["tool_calls"]:
+                    args_str = tool_call["function"]["arguments"]
+                    if isinstance(args_str, str):
+                        args = json.loads(args_str)
+                    else:
+                        args = args_str if isinstance(args_str, dict) else {}
                     tool_call_history.append({
                         "id": tool_call["id"],
                         "name": tool_call["function"]["name"],
-                        "arguments": json.loads(tool_call["function"]["arguments"])
+                        "arguments": args
                     })
                 
                 return response, tool_call_history

@@ -112,7 +112,11 @@ class ReActAgent:
             
             for tool_call in tool_calls:
                 tool_name = tool_call["function"]["name"]
-                tool_args = json.loads(tool_call["function"]["arguments"])
+                args_str = tool_call["function"]["arguments"]
+                if isinstance(args_str, str):
+                    tool_args = json.loads(args_str)
+                else:
+                    tool_args = args_str if isinstance(args_str, dict) else {}
                 tool_id = tool_call["id"]
                 
                 if on_progress:
