@@ -1,7 +1,5 @@
 import streamlit as st
 import json
-import time
-import uuid
 from llm_client import LLMClient
 from core import SkillManager, ReActAgent, TaskPlanner, VectorMemory
 from tools.soul_skill import SoulSkill
@@ -76,7 +74,6 @@ if prompt := st.chat_input("请输入指令..."):
     
     with st.chat_message("assistant"):
         progress_placeholder = st.empty()
-        trace_placeholder = st.empty()
         
         def on_progress(stage: str, message: str):
             icons = {
@@ -107,64 +104,28 @@ if prompt := st.chat_input("请输入指令..."):
                         if "error" in item.get("result", {}):
                             st.error(f"❌ {item['result']['error']}")
                         else:
-                            final_reply = "代码生成失败。"
-                            should_replan = False
-                            break
-
-                    # 情况 B: 普通聊天
-                    elif tool_name == "chat":
-                        temp_msgs = st.session_state.messages + [{"role": "system", "content": f"工具执行日志: {json.dumps(execution_log)}"}]
-                        response = client.chat(temp_msgs)
-                        final_reply = response["choices"][0]["message"]["content"]
-                        # 任务完成，无需重规划
-                        should_replan = False 
-
-                    # 情况 C: 调用工具
-                    elif tool_name in skill_manager.skills:
-                        func = skill_manager.get_skill(tool_name)
-                        result = func(tool_args)
-                        execution_log.append({"step": step_desc, "result": result})
-                        
-                        # 将结果注入历史
-                        st.session_state.messages.append({
-                            "role": "system",
-                            "content": f"工具 [{tool_name}] 执行结果: {json.dumps(result, ensure_ascii=False)}"
-                        })
-                        
-                        # 如果是最后一步，生成总结
-                        if step_item == plan_data["plan"][-1]:
-                             summary_prompt = "根据上述工具执行结果，回复用户。"
-                             temp_msgs = st.session_state.messages + [{"role": "user", "content": summary_prompt}]
-                             res = client.chat(temp_msgs)
-                             final_reply = res["choices"][0]["message"]["content"]
-                             should_replan = False
-                    else:
-                        placeholder.error(f"❌ 未知工具: {tool_name}")
-                        should_replan = False
-                        break
-
-                # 如果不需要重规划（任务完成或失败），退出 while 循环
-                if not should_replan:
-                    break
-            
-            # 循环结束，显示最终结果
-            if final_reply:
-                placeholder.markdown(final_reply)
-                st.session_state.messages.append({"role": "assistant", "content": final_reply})
-            else:
-                # 回退机制：如果技能执行失败，使用聊天模式生成回复
-                placeholder.markdown("🤔 正在生成回复...")
-                fallback_response = client.chat(st.session_state.messages)
-                if fallback_response:
-                    final_reply = fallback_response["choices"][0]["message"]["content"]
-                    placeholder.markdown(final_reply)
-                    st.session_state.messages.append({"role": "assistant", "content": final_reply})
-                else:
-                    placeholder.markdown("抱歉，我遇到了一些问题，请稍后再试。")
-
-    # --- 5. 记忆更新 ---
-    if final_reply:
-        memory.record_interaction(prompt, final_reply, client)
+                            st.success("✅ 执行成功")
+                            with st.expander("查看结果"):
+                                st.json(item["result"])
+        else:
+            final_response = f"抱歉，任务执行遇到问题: {result['response']}"
+            st.error(final_response)
+        
+        message_entry = {
+            "role": "assistant", 
+            "content": final_response
+        }
+        if result.get("trace"):
+            message_entry["trace"] = result["trace"]
+        
+        st.session_state.messages.append(message_entry)
+        
+        memory.add_interaction(
+            user_input=prompt,
+            assistant_response=final_response,
+            tool_calls=[{"name": t["tool"], "args": t["args"]} for t in result.get("trace", [])]
+        )
+        
         st.session_state.interaction_count += 1
         
         if st.session_state.interaction_count % 10 == 0:

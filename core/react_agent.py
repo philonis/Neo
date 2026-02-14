@@ -11,6 +11,11 @@ class ReActAgent:
     2. Action: 选择并执行工具
     3. Observation: 观察执行结果
     4. 循环直到任务完成
+    
+    增强功能:
+    - 自主编程能力：当现有工具不足时，可创建新技能
+    - 链式调用：支持多步骤任务
+    - 错误恢复：失败时尝试其他方法
     """
     
     def __init__(self, llm_client, skill_manager, memory_system=None, max_iterations=15):
@@ -20,7 +25,7 @@ class ReActAgent:
         self.max_iterations = max_iterations
         
         self.execution_trace = []
-        self.current_thought = ""
+        self.generated_skills = []
         
         self.system_prompt = """你是一个智能助手 Neo，使用 ReAct 模式工作。
 
@@ -31,12 +36,17 @@ class ReActAgent:
 3. **Observation**: 观察执行结果
 4. 重复以上步骤直到任务完成
 
+## 核心能力
+- 你可以**自主编写新技能**来解决现有工具无法完成的任务
+- 当发现需要新功能时，使用 `create_skill` 工具创建
+- 创建的新技能会立即可用，你可以在后续步骤中使用
+
 ## 重要规则
+- **优先尝试解决问题**：不要轻易说"无法完成"，先尝试创建新技能
 - 每次只执行一个工具调用
 - 仔细观察工具返回的结果
-- 如果工具执行失败，尝试其他方法
-- 当任务完成时，直接回复用户，不要继续调用工具
-- 保持思考简洁明了
+- 如果工具执行失败，分析原因并尝试其他方法
+- 当任务完成时，直接回复用户
 
 ## 可用工具
 {tool_descriptions}
@@ -46,17 +56,10 @@ class ReActAgent:
 当你认为任务完成时，直接回复用户。"""
 
     def run(self, user_input: str, context: List[Dict] = None, on_progress: Callable = None) -> Dict:
-        """
-        执行 ReAct 循环
-        
-        :param user_input: 用户输入
-        :param context: 上下文消息
-        :param on_progress: 进度回调函数
-        :return: {"success": bool, "response": str, "trace": list}
-        """
         self.execution_trace = []
+        self.generated_skills = []
         
-        tool_schemas = self.skills.get_all_tools_schema()
+        tool_schemas = self._get_tool_schemas_with_create_skill()
         tool_descriptions = self._format_tool_descriptions(tool_schemas)
         
         messages = self._build_initial_messages(user_input, context, tool_descriptions)
@@ -87,7 +90,10 @@ class ReActAgent:
                 if on_progress:
                     on_progress("action", f"执行工具: {tool_name}")
                 
-                result = self._execute_tool(tool_name, tool_args)
+                if tool_name == "create_skill":
+                    result = self._create_skill(tool_args, on_progress)
+                else:
+                    result = self._execute_tool(tool_name, tool_args)
                 
                 self.execution_trace.append({
                     "iteration": iteration + 1,
@@ -104,10 +110,90 @@ class ReActAgent:
                 }
                 messages.append(tool_message)
                 
+                if tool_name == "create_skill" and result.get("success"):
+                    tool_schemas = self._get_tool_schemas_with_create_skill()
+                
                 if on_progress:
                     on_progress("observation", f"观察结果: {self._summarize_result(result)}")
         
         return self._build_result(False, "达到最大迭代次数，任务未完成", messages)
+
+    def _get_tool_schemas_with_create_skill(self) -> List[Dict]:
+        schemas = self.skills.get_all_tools_schema()
+        
+        create_skill_schema = {
+            "type": "function",
+            "function": {
+                "name": "create_skill",
+                "description": "创建新技能。当你发现现有工具无法完成任务时，使用此工具编写新技能。新技能创建后会立即可用。",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "skill_name": {
+                            "type": "string",
+                            "description": "技能名称，使用下划线命名法，如 podcast_fetcher"
+                        },
+                        "skill_description": {
+                            "type": "string",
+                            "description": "技能功能描述，用于语义搜索匹配"
+                        },
+                        "skill_code": {
+                            "type": "string",
+                            "description": "完整的 Python 技能代码，必须包含 run() 和 get_tool_definition() 函数"
+                        }
+                    },
+                    "required": ["skill_name", "skill_description", "skill_code"]
+                }
+            }
+        }
+        
+        schemas.append(create_skill_schema)
+        return schemas
+
+    def _create_skill(self, args: Dict, on_progress: Callable = None) -> Dict:
+        skill_name = args.get("skill_name", "")
+        skill_description = args.get("skill_description", "")
+        skill_code = args.get("skill_code", "")
+        
+        if not skill_name or not skill_code:
+            return {"success": False, "error": "缺少技能名称或代码"}
+        
+        if on_progress:
+            on_progress("generating", f"创建技能: {skill_name}")
+        
+        skill_code = self._clean_code(skill_code)
+        
+        if not self._validate_skill_code(skill_code):
+            return {"success": False, "error": "技能代码验证失败"}
+        
+        filepath = self.skills.create_skill_file(skill_name, skill_code)
+        
+        if filepath:
+            self.generated_skills.append(skill_name)
+            return {
+                "success": True,
+                "message": f"技能 {skill_name} 创建成功，现在可以使用",
+                "skill_name": skill_name
+            }
+        else:
+            return {"success": False, "error": "技能保存失败"}
+
+    def _clean_code(self, code: str) -> str:
+        import re
+        code = re.sub(r'```python\s*', '', code, flags=re.IGNORECASE)
+        code = re.sub(r'```\s*', '', code)
+        return code.strip()
+
+    def _validate_skill_code(self, code: str) -> bool:
+        required = ['def run(', 'def get_tool_definition(']
+        for r in required:
+            if r not in code:
+                return False
+        try:
+            compile(code, '<string>', 'exec')
+            return True
+        except SyntaxError:
+            return False
 
     def _build_initial_messages(self, user_input: str, context: List[Dict], tool_descriptions: str) -> List[Dict]:
         messages = []
@@ -133,7 +219,7 @@ class ReActAgent:
 
     def _execute_tool(self, tool_name: str, tool_args: Dict) -> Dict:
         if tool_name not in self.skills.skills:
-            return {"error": f"未知工具: {tool_name}"}
+            return {"error": f"未知工具: {tool_name}，你可以使用 create_skill 创建新技能"}
         
         try:
             func = self.skills.get_skill(tool_name)
@@ -168,6 +254,7 @@ class ReActAgent:
             "success": success,
             "response": response,
             "trace": self.execution_trace,
+            "generated_skills": self.generated_skills,
             "message_count": len(messages)
         }
 
@@ -182,4 +269,8 @@ class ReActAgent:
                 lines.append(f"  - 结果: ❌ {item['result']['error']}")
             else:
                 lines.append(f"  - 结果: ✅ 成功")
+        
+        if self.generated_skills:
+            lines.append(f"\n## 新创建的技能: {', '.join(self.generated_skills)}")
+        
         return "\n".join(lines)

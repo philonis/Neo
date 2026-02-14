@@ -40,6 +40,9 @@ class SkillManager:
             ("tools.notes_skill", "NotesSkill", "notes_operator"),
             ("tools.chat_skill", "ChatSkill", "chat"),
             ("tools.search_skill", "SearchSkill", "web_search"),
+            ("tools.http_skill", "HttpSkill", "http_request"),
+            ("tools.http_skill", "RssSkill", "rss_fetcher"),
+            ("tools.http_skill", "WebScraperSkill", "web_scraper"),
         ]
         
         for module_path, class_name, default_name in static_skills:
