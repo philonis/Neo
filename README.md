@@ -24,7 +24,22 @@ Neo 采用 ReAct (Reasoning + Acting) 模式工作：
 
 这种架构使 Neo 能够自我修正、动态调整策略，而不是盲目执行预设计划。
 
-### 🔧 自主编程能力 ⭐ NEW
+### 🌐 Browser Agent ⭐ NEW
+Neo 具备**像真人一样使用浏览器**的能力：
+- 自动导航、点击、填表、登录
+- 处理动态渲染的页面
+- 提取页面内容
+- 安全护栏保护敏感操作
+- 支持凭证加密存储
+
+### 💻 Desktop Agent ⭐ NEW
+Neo 可以**像真人一样操作macOS应用**：
+- 启动和激活本地应用（豆包、微信、Safari等）
+- 在应用中输入文本、点击按钮
+- 发送快捷键、读取窗口内容
+- 支持40+常用应用
+
+### 🔧 自主编程能力
 Neo 具备**自我编程进化**的能力：
 - 当发现现有工具无法完成任务时，自动编写新技能
 - 新技能创建后立即可用，无需重启
@@ -40,13 +55,17 @@ Neo 具备**自我编程进化**的能力：
 ### 🛠️ 丰富的内置工具
 | 工具 | 功能 |
 |-----|------|
-| `notes_operator` | macOS 备忘录操作 |
-| `web_search` | 网络搜索 |
-| `http_request` | HTTP 请求，获取网页/API 数据 |
-| `rss_fetcher` | RSS/Atom 订阅解析，获取播客、博客更新 |
-| `web_scraper` | 网页内容提取 |
-| `chat` | 通用聊天 |
-| `create_skill` | 动态创建新技能 |
+| `browser_agent` | 🌐 像真人一样使用浏览器 |
+| `browser_agent_save_credentials` | 🔐 保存网站登录凭证 |
+| `desktop_agent` | 💻 像真人一样操作macOS应用 |
+| `desktop_list_common_apps` | 📱 列出支持的常用应用 |
+| `notes_operator` | 📝 macOS 备忘录操作 |
+| `web_search` | 🔍 网络搜索 |
+| `http_request` | 🌍 HTTP 请求，获取网页/API 数据 |
+| `rss_fetcher` | 📡 RSS/Atom 订阅解析 |
+| `web_scraper` | 📄 网页内容提取 |
+| `chat` | 💬 通用聊天 |
+| `create_skill` | 🔧 动态创建新技能 |
 
 ### 💾 向量记忆系统
 - **短期记忆**: 最近对话，快速访问
@@ -71,6 +90,17 @@ Neo/
 │   ├── memory.py           # 向量记忆系统
 │   ├── skill_manager.py    # 增强型技能管理器
 │   └── skill_generator.py  # 动态技能生成器
+├── browser_agent/          # 🌐 浏览器自动化模块
+│   ├── __init__.py
+│   ├── browser_skill.py    # 主技能入口
+│   ├── browser_controller.py # Playwright浏览器控制
+│   ├── safety_guard.py     # 安全护栏系统
+│   └── session_manager.py  # 会话和凭证管理
+├── desktop_agent/          # 💻 macOS应用自动化模块
+│   ├── __init__.py
+│   ├── desktop_skill.py    # 主技能入口
+│   ├── app_launcher.py     # 应用启动器
+│   └── ui_agent.py         # UI操作代理
 ├── tools/                  # 系统级内置技能
 │   ├── notes_skill.py      # 备忘录操作
 │   ├── chat_skill.py       # 通用聊天工具
@@ -95,18 +125,19 @@ cd Neo
 
 # 安装依赖
 pip install -r requirements.txt
+
+# 安装 Playwright 浏览器（用于 Browser Agent）
+pip install playwright
+playwright install chromium
 ```
 
 依赖列表 (`requirements.txt`):
 ```text
 openai
-rich
 streamlit
-python-dotenv
-watchdog
-pyyaml
-beautifulsoup4
 requests
+numpy
+playwright>=1.40.0
 ```
 
 ### 2. 配置 API Key
@@ -140,7 +171,63 @@ python test_system.py
 
 ## 💡 使用指南
 
-### 自主编程示例 ⭐ NEW
+### Browser Agent 示例 ⭐ NEW
+
+**场景：访问需要登录的网站**
+```
+用户: 帮我看看某论坛的最新帖子
+
+Neo:
+  🧠 Thought: 需要访问网站获取信息...
+  ⚡ Action: browser_agent(action="navigate", url="https://example.com")
+  👁️ Observation: 页面加载成功，检测到需要登录
+  🧠 Thought: 需要用户确认是否登录
+  ❓ 询问: 检测到需要登录，是否继续？
+  [用户确认]
+  ⚡ Action: browser_agent(action="login")
+  👁️ Observation: 登录成功
+  ⚡ Action: browser_agent(action="extract")
+  ✅ 回复: 最新帖子列表如下...
+```
+
+**保存凭证供自动登录：**
+```
+用户: 保存这个网站的登录凭证
+
+Neo:
+  ⚡ Action: browser_agent_save_credentials(
+      site_url="https://example.com",
+      username="my_username",
+      password="my_password"
+    )
+  ✅ 回复: 凭证已加密保存，下次访问时自动登录
+```
+
+### Desktop Agent 示例 ⭐ NEW
+
+**场景：打开豆包并对话**
+```
+用户: 帮我打开豆包，问它今天天气怎么样
+
+Neo:
+  🧠 Thought: 需要启动豆包应用...
+  ⚡ Action: desktop_agent(action="launch", app_name="豆包")
+  👁️ Observation: 豆包已启动
+  ⚡ Action: desktop_agent(action="type", text="今天天气怎么样")
+  👁️ Observation: 已输入文本
+  ⚡ Action: desktop_agent(action="hotkey", key="enter")
+  👁️ Observation: 已发送
+  ⚡ Action: desktop_agent(action="read")
+  ✅ 回复: 豆包回复：今天天气...
+```
+
+**支持的常用应用：**
+```
+豆包、微信、Safari、Chrome、音乐、备忘录、日历、
+访达、终端、计算器、邮件、地图、飞书、钉钉...
+```
+
+### 自主编程示例
 
 **场景：查询播客最新一期**
 ```
@@ -188,43 +275,23 @@ Neo:
 ✅ 回复: "已为您创建购物清单备忘录"
 ```
 
-### 示例对话
+## 🛡️ 安全护栏
 
-**简单任务:**
-```
-用户: 你好
-Neo: 你好！我是 Neo，有什么可以帮助你的吗？
-```
-
-**工具调用:**
-```
-用户: 帮我创建一个叫"今日待办"的备忘录
-Neo: [调用 notes_operator 工具]
-    已为您创建备忘录"今日待办"，您可以开始添加内容了。
-```
-
-**链式调用:**
-```
-用户: 帮我搜索今天的科技新闻，然后创建一个备忘录记录标题
-Neo: [分析任务复杂度: medium]
-    1. web_search(query="今日科技新闻") ✓
-    2. notes_operator(action="create", title="科技新闻", content="...") ✓
-    已完成！备忘录已创建，包含今天的科技新闻标题。
-```
-
-### 记忆系统
-
-Neo 会记住与你的对话：
+Browser Agent 和 Desktop Agent 都内置了安全护栏：
 
 ```
-用户: 我喜欢喝咖啡
-Neo: 好的，我记住了。
-
-[10轮对话后]
-
-用户: 给我推荐点喝的
-Neo: 根据您的偏好，我推荐您尝试...
+操作分级：
+├── ✅ 安全操作（自动执行）
+│   └── navigate, read, scroll, screenshot, launch
+├── ⚠️ 需确认操作
+│   └── click, fill, login, type, hotkey
+└── ❌ 禁止操作
+    └── payment, delete, publish, modify_settings
 ```
+
+- 敏感操作需要用户确认
+- 行为审计日志记录所有操作
+- 凭证加密存储
 
 ## 🛠️ 开发新技能
 
@@ -278,11 +345,16 @@ Neo 会在运行时自动创建技能，保存在 `agent_skills/` 目录。
 | 记忆系统 | 文件存储 | 向量检索 + 压缩 |
 | 技能搜索 | 关键词匹配 | 语义相似度 |
 | 自主编程 | ❌ | ✅ 动态创建技能 |
-| 网络能力 | 仅搜索 | HTTP + RSS + 网页提取 |
+| 浏览器自动化 | ❌ | ✅ Browser Agent |
+| 应用自动化 | ❌ | ✅ Desktop Agent |
+| 安全护栏 | ❌ | ✅ 操作分级保护 |
 
 ## ⚠️ 注意事项
 
-- **权限**: 操作备忘录需要 macOS 的"完全磁盘访问"权限
+- **权限**: 
+  - 操作备忘录需要 macOS 的"完全磁盘访问"权限
+  - Desktop Agent 需要"辅助功能"权限
+  - Browser Agent 需要安装 Playwright
 - **Token 消耗**: ReAct 循环可能多次调用 LLM，建议使用性价比高的模型
 - **迭代限制**: 默认最多 15 次迭代，防止无限循环
 - **技能验证**: 动态创建的技能会经过语法检查，但请谨慎执行
