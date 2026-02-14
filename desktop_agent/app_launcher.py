@@ -74,7 +74,9 @@ class AppLauncher:
                 ['osascript', '-e', script],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
+                encoding='utf-8',
+                errors='replace'
             )
             
             if result.returncode == 0:

@@ -64,6 +64,8 @@ class HttpSkill:
             
             response.raise_for_status()
             
+            response.encoding = response.apparent_encoding or 'utf-8'
+            
             content_type = response.headers.get("Content-Type", "")
             
             if "application/json" in content_type:
@@ -131,6 +133,8 @@ class RssSkill:
             }
             response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
+            
+            response.encoding = response.apparent_encoding or 'utf-8'
             
             content = response.text
             
@@ -221,6 +225,8 @@ class WebScraperSkill:
             }
             response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
+            
+            response.encoding = response.apparent_encoding or 'utf-8'
             
             content = response.text
             

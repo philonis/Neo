@@ -32,7 +32,9 @@ class UIAgent:
                 ['osascript', '-e', script],
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
+                encoding='utf-8',
+                errors='replace'
             )
             
             if result.returncode == 0:

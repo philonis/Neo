@@ -69,7 +69,7 @@ class ReActAgent:
 
 示例：
 ```
-工具返回: {"success": false, "requires_confirmation": true, "confirmation_message": "是否允许点击登录按钮？"}
+工具返回: {{"success": false, "requires_confirmation": true, "confirmation_message": "是否允许点击登录按钮？"}}
 你的回复: "我需要点击登录按钮才能继续。请问您允许这个操作吗？"
 用户回复: "允许"
 你的操作: 再次调用相同工具，添加 auto_confirm: true 参数
