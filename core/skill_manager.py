@@ -48,6 +48,10 @@ class SkillManager:
             ("browser_agent.browser_skill", "BrowserListSitesSkill", "browser_agent_list_sites"),
             ("desktop_agent.desktop_skill", "DesktopSkill", "desktop_agent"),
             ("desktop_agent.desktop_skill", "DesktopAppListSkill", "desktop_list_common_apps"),
+            ("tools.code_guard_skill", "CodeGuardSkill", "code_guard_status"),
+            ("tools.code_guard_skill", "CodeGuardSetLevelSkill", "code_guard_set_level"),
+            ("tools.code_guard_skill", "CodeGuardHistorySkill", "code_guard_history"),
+            ("tools.code_guard_skill", "CodeGuardRollbackSkill", "code_guard_rollback"),
         ]
         
         for module_path, class_name, default_name in static_skills:
@@ -222,6 +226,21 @@ class SkillManager:
         if not self._validate_skill_code(code_content):
             print(f"[SkillManager] ⚠️ 技能代码验证失败")
             return None
+        
+        try:
+            from code_guard import get_code_guard
+            guard = get_code_guard()
+            
+            is_dangerous, dangers = guard.check_dangerous_code(code_content)
+            if is_dangerous:
+                print(f"[SkillManager] ❌ 代码包含危险模式: {dangers}")
+                return None
+            
+            is_suspicious, warnings = guard.check_suspicious_code(code_content)
+            if is_suspicious:
+                print(f"[SkillManager] ⚠️ 代码包含可疑模式: {warnings}")
+        except ImportError:
+            pass
         
         filename = f"{skill_name}.py"
         filepath = os.path.join(self.dynamic_dir, filename)

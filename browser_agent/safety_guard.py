@@ -40,31 +40,43 @@ class SafetyGuard:
     操作分级:
     - safe: 自动执行，无需确认
     - confirm_required: 需要用户确认
-    - forbidden: 禁止执行
+    - forbidden: 禁止执行，需要用户确认
     """
     
     SAFE_OPERATIONS = {
         "navigate", "read", "scroll", "screenshot", 
         "extract", "wait", "get_title", "get_url",
         "launch", "activate", "is_running", "list_apps",
-        "get_elements", "get_dom", "check_login"
-    }
-    
-    CONFIRM_REQUIRED_OPERATIONS = {
+        "get_elements", "get_dom", "check_login",
         "click", "fill", "login", "search", 
         "submit", "select", "upload", "type",
-        "hotkey", "clear_and_type", "click_at", "select_menu"
+        "hotkey", "clear_and_type", "click_at", "select_menu",
+        "close"
     }
     
     FORBIDDEN_OPERATIONS = {
-        "payment", "delete", "publish", "modify_settings",
+        "payment", "delete", "modify_settings",
         "download_file", "execute_script", "install_extension"
     }
     
-    SENSITIVE_SELECTORS = {
+    NEED_CONFIRM_BUTTON_TEXT = {
+        "发布", "发表", "公开", "publish",
+        "发送消息", "发送给", "send message",
+        "提交订单", "确认购买", "立即购买", "支付",
+        "删除", "移除", "delete", "remove"
+    }
+    
+    SAFE_BUTTON_TEXT = {
+        "搜索", "查询", "找一下", "search", "query",
+        "提交", "确定", "确认", "submit", "ok", "confirm",
+        "登录", "注册", "login", "sign", "register",
+        "下一步", "继续", "next", "continue",
+        "刷新", "reload", "refresh"
+    }
+    
+    FORBIDDEN_SELECTORS = {
         "payment", "checkout", "buy", "purchase", "pay",
         "delete", "remove", "trash",
-        "submit", "post", "publish", "send",
         "settings", "config", "admin"
     }
     
@@ -78,6 +90,19 @@ class SafetyGuard:
         
         os.makedirs(audit_log_path, exist_ok=True)
     
+    def _should_confirm_button(self, target: str) -> bool:
+        target_lower = target.lower()
+        
+        for safe_text in self.SAFE_BUTTON_TEXT:
+            if safe_text.lower() in target_lower:
+                return False
+        
+        for sensitive_text in self.NEED_CONFIRM_BUTTON_TEXT:
+            if sensitive_text.lower() in target_lower:
+                return True
+        
+        return False
+    
     def classify_operation(self, action: str, target: str = "", value: str = "") -> OperationLevel:
         action_lower = action.lower()
         
@@ -85,20 +110,17 @@ class SafetyGuard:
             return OperationLevel.FORBIDDEN
         
         for forbidden in self.FORBIDDEN_OPERATIONS:
-            if forbidden in action_lower or forbidden in target.lower():
+            if forbidden in action_lower:
                 return OperationLevel.FORBIDDEN
         
-        if action_lower in self.SAFE_OPERATIONS:
-            return OperationLevel.SAFE
+        for selector in self.FORBIDDEN_SELECTORS:
+            if selector in target.lower():
+                return OperationLevel.FORBIDDEN
         
-        if action_lower in self.CONFIRM_REQUIRED_OPERATIONS:
+        if self._should_confirm_button(target):
             return OperationLevel.CONFIRM_REQUIRED
         
-        for sensitive in self.SENSITIVE_SELECTORS:
-            if sensitive in target.lower() or sensitive in value.lower():
-                return OperationLevel.CONFIRM_REQUIRED
-        
-        return OperationLevel.CONFIRM_REQUIRED
+        return OperationLevel.SAFE
     
     def check_operation(
         self, 
@@ -119,15 +141,6 @@ class SafetyGuard:
                 "requires_confirmation": False
             }
         
-        if level == OperationLevel.FORBIDDEN:
-            self._log_audit(action, target, level, False, "操作被禁止")
-            return {
-                "allowed": False,
-                "level": level.value,
-                "reason": f"操作 '{action}' 被安全策略禁止",
-                "requires_confirmation": False
-            }
-        
         if level == OperationLevel.SAFE:
             self._log_audit(action, target, level, True, "安全操作，自动批准")
             return {
@@ -135,6 +148,56 @@ class SafetyGuard:
                 "level": level.value,
                 "reason": "安全操作",
                 "requires_confirmation": False
+            }
+        
+        if level == OperationLevel.FORBIDDEN:
+            session_key = f"forbidden:{action}:{target}"
+            
+            if session_key in self.session_confirmations:
+                self._log_audit(action, target, level, True, "用户已授权禁止操作")
+                return {
+                    "allowed": True,
+                    "level": level.value,
+                    "reason": "用户已授权",
+                    "requires_confirmation": False
+                }
+            
+            if auto_confirm:
+                self._log_audit(action, target, level, True, "自动确认禁止操作")
+                return {
+                    "allowed": True,
+                    "level": level.value,
+                    "reason": "自动确认",
+                    "requires_confirmation": False
+                }
+            
+            if confirmation_callback:
+                user_confirmed = confirmation_callback(action, target, value)
+                if user_confirmed:
+                    self.session_confirmations[session_key] = True
+                    self._log_audit(action, target, level, True, "用户确认禁止操作")
+                    return {
+                        "allowed": True,
+                        "level": level.value,
+                        "reason": "用户已确认",
+                        "requires_confirmation": False
+                    }
+                else:
+                    self._log_audit(action, target, level, False, "用户拒绝")
+                    return {
+                        "allowed": False,
+                        "level": level.value,
+                        "reason": "用户拒绝操作",
+                        "requires_confirmation": False
+                    }
+            
+            self._log_audit(action, target, level, False, "等待确认禁止操作")
+            return {
+                "allowed": False,
+                "level": level.value,
+                "reason": "此操作涉及敏感内容，需要用户确认",
+                "requires_confirmation": True,
+                "confirmation_message": f"⚠️ 检测到敏感操作：{action}\n目标：{target[:100]}\n\n此操作可能涉及敏感内容，是否允许执行？"
             }
         
         if level == OperationLevel.CONFIRM_REQUIRED:

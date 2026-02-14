@@ -290,6 +290,57 @@ class MySkill:
 - **Token 消耗**: ReAct 循环可能多次调用 LLM，建议使用性价比高的模型
 - **迭代限制**: 默认最多 15 次迭代，防止无限循环
 
+## 🔒 代码保护系统
+
+Neo 具备自我编程能力，但为了安全，我们实现了代码保护系统：
+
+### 保护级别
+
+| 级别 | 说明 | 风险 |
+|------|------|------|
+| `none` | 禁止所有代码修改 | 无 |
+| `skills_only` | 只能创建新技能（默认） | 低 |
+| `extensions` | 可以创建扩展模块 | 中 |
+| `full_with_approval` | 可以修改任何文件，需确认 | 高 |
+
+### 核心文件保护
+
+以下文件被标记为**只读**，默认不可修改：
+- `core/react_agent.py` - Agent核心
+- `browser_agent/safety_guard.py` - 安全护栏
+- `code_guard.py` - 代码保护系统
+- 其他核心模块...
+
+### 沙盒区域
+
+Neo 可以在以下目录自由创建新功能：
+- `agent_skills/` - 动态技能
+- `extensions/` - 扩展模块
+
+### 危险代码检测
+
+系统会自动检测并阻止：
+- `os.system()`、`subprocess` 等系统调用
+- `eval()`、`exec()` 等动态执行
+- 修改安全配置的代码
+- 可疑的网络请求
+
+### 相关命令
+
+```
+用户: 查看代码保护状态
+Neo: [调用 code_guard_status]
+
+用户: 设置保护级别为 extensions
+Neo: [调用 code_guard_set_level]
+
+用户: 查看修改历史
+Neo: [调用 code_guard_history]
+
+用户: 回滚最近的修改
+Neo: [调用 code_guard_rollback]
+```
+
 ---
 
 <a name="english"></a>

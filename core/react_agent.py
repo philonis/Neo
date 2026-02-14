@@ -198,6 +198,24 @@ class ReActAgent:
         if not self._validate_skill_code(skill_code):
             return {"success": False, "error": "技能代码验证失败"}
         
+        try:
+            from code_guard import get_code_guard
+            guard = get_code_guard()
+            
+            is_dangerous, dangers = guard.check_dangerous_code(skill_code)
+            if is_dangerous:
+                return {
+                    "success": False,
+                    "error": "代码包含危险模式，禁止创建",
+                    "dangers": dangers
+                }
+            
+            is_suspicious, warnings = guard.check_suspicious_code(skill_code)
+            if is_suspicious:
+                print(f"[ReActAgent] ⚠️ 技能包含可疑代码: {warnings}")
+        except ImportError:
+            pass
+        
         filepath = self.skills.create_skill_file(skill_name, skill_code)
         
         if filepath:
