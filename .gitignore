@@ -2,4 +2,4 @@ __pycache__/
 *.pyc
 memory/
 .env
-.vscode/
+agent_skills/

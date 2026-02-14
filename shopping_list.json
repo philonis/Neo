@@ -1,0 +1,166 @@
+{
+  "title": "2026年除夕年夜饭食材清单",
+  "items": [
+    {
+      "name": "整鸡",
+      "quantity": "1只",
+      "category": "肉类"
+    },
+    {
+      "name": "猪蹄",
+      "quantity": "2斤",
+      "category": "肉类"
+    },
+    {
+      "name": "排骨",
+      "quantity": "2斤",
+      "category": "肉类"
+    },
+    {
+      "name": "鲜虾",
+      "quantity": "1斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "鲈鱼",
+      "quantity": "1条",
+      "category": "海鲜"
+    },
+    {
+      "name": "牛肉",
+      "quantity": "1斤",
+      "category": "肉类"
+    },
+    {
+      "name": "鸡蛋",
+      "quantity": "12个",
+      "category": "蛋类"
+    },
+    {
+      "name": "大白菜",
+      "quantity": "2颗",
+      "category": "蔬菜"
+    },
+    {
+      "name": "芹菜",
+      "quantity": "1把",
+      "category": "蔬菜"
+    },
+    {
+      "name": "胡萝卜",
+      "quantity": "3根",
+      "category": "蔬菜"
+    },
+    {
+      "name": "土豆",
+      "quantity": "5个",
+      "category": "蔬菜"
+    },
+    {
+      "name": "香菇",
+      "quantity": "半斤",
+      "category": "菌菇"
+    },
+    {
+      "name": "木耳",
+      "quantity": "1袋",
+      "category": "菌菇"
+    },
+    {
+      "name": "黄瓜",
+      "quantity": "3根",
+      "category": "凉菜"
+    },
+    {
+      "name": "豆腐皮",
+      "quantity": "半斤",
+      "category": "凉菜"
+    },
+    {
+      "name": "花生米",
+      "quantity": "1袋",
+      "category": "凉菜"
+    },
+    {
+      "name": "海带丝",
+      "quantity": "1袋",
+      "category": "凉菜"
+    },
+    {
+      "name": "葱",
+      "quantity": "1捆",
+      "category": "调料"
+    },
+    {
+      "name": "姜",
+      "quantity": "1块",
+      "category": "调料"
+    },
+    {
+      "name": "蒜",
+      "quantity": "1头",
+      "category": "调料"
+    },
+    {
+      "name": "酱油",
+      "quantity": "1瓶",
+      "category": "调料"
+    },
+    {
+      "name": "醋",
+      "quantity": "1瓶",
+      "category": "调料"
+    },
+    {
+      "name": "料酒",
+      "quantity": "1瓶",
+      "category": "调料"
+    },
+    {
+      "name": "食用油",
+      "quantity": "1桶",
+      "category": "调料"
+    },
+    {
+      "name": "盐",
+      "quantity": "1袋",
+      "category": "调料"
+    },
+    {
+      "name": "糖",
+      "quantity": "1袋",
+      "category": "调料"
+    },
+    {
+      "name": "饺子皮",
+      "quantity": "2斤",
+      "category": "主食"
+    },
+    {
+      "name": "面粉",
+      "quantity": "1袋",
+      "category": "主食"
+    },
+    {
+      "name": "米饭",
+      "quantity": "适量",
+      "category": "主食"
+    },
+    {
+      "name": "水果拼盘",
+      "quantity": "1份",
+      "category": "水果"
+    },
+    {
+      "name": "饮料",
+      "quantity": "1箱",
+      "category": "饮品"
+    },
+    {
+      "name": "啤酒",
+      "quantity": "1箱",
+      "category": "饮品"
+    }
+  ],
+  "created_at": "2026-02-10"
+}
