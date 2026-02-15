@@ -108,6 +108,12 @@ class SkillManager:
         if not schema:
             return
         
+        # 验证技能格式
+        validation = self.md_loader.validate_skill(skill_name)
+        if not validation.get("valid"):
+            print(f"[SkillManager] ⚠️ 技能 {skill_name} 验证失败: {validation.get('errors')}")
+            return
+        
         def md_skill_runner(arguments: dict) -> dict:
             return self._execute_md_skill(skill_name, arguments)
         
@@ -127,6 +133,26 @@ class SkillManager:
         action = arguments.get("action", "")
         params = arguments.get("params", {})
         
+        # 检查依赖
+        metadata = self.md_loader.load_metadata(skill_name)
+        if metadata and metadata.requires:
+            missing_deps = []
+            bins = metadata.requires.get('bins', [])
+            for bin_name in bins:
+                if not self._check_bin_available(bin_name):
+                    missing_deps.append(f"二进制文件: {bin_name}")
+            
+            envs = metadata.requires.get('env', [])
+            for env_name in envs:
+                if not os.environ.get(env_name):
+                    missing_deps.append(f"环境变量: {env_name}")
+            
+            if missing_deps:
+                return {
+                    "success": False, 
+                    "error": f"缺少依赖: {', '.join(missing_deps)}"
+                }
+        
         script_path = f"scripts/{action}.py"
         script_content = self.md_loader.load_script(skill_name, f"{action}.py")
         
@@ -142,8 +168,22 @@ class SkillManager:
             "message": f"技能 {skill_name} 已触发",
             "action": action,
             "params": params,
-            "workflow": body.workflow[:500] if body.workflow else ""
+            "workflow": body.workflow[:500] if body.workflow else "",
+            "resources": body.resources[:10]  # 限制返回的资源数量
         }
+    
+    def _check_bin_available(self, bin_name: str) -> bool:
+        """检查二进制文件是否可用"""
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["which", bin_name], 
+                capture_output=True, 
+                text=True
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
     
     def _execute_script(self, script_content: str, params: dict) -> dict:
         local_vars = {"params": params, "result": None}

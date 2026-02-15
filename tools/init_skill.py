@@ -19,6 +19,12 @@ name: {skill_name}
 description: |
   {description}
   触发场景：(1) 场景一 (2) 场景二 (3) 场景三
+metadata:
+  openclaw:
+    requires:
+      bins: []
+      env: []
+    install: []
 ---
 
 # {skill_title}
