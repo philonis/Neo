@@ -89,6 +89,192 @@ def render_audio_players(content: str):
     
     return audio_items
 
+def render_weather_card(content: str, result_data: Optional[Dict] = None):
+    weather_keywords = ['天气', '气温', '温度', 'weather', 'temperature', '晴', '雨', '阴', '雪', '多云']
+    
+    if not any(kw in content.lower() for kw in weather_keywords):
+        return False
+    
+    if result_data and isinstance(result_data, dict):
+        if 'temperature' in result_data or 'weather' in result_data:
+            st.divider()
+            st.subheader("🌤️ 天气信息")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if 'temperature' in result_data:
+                    temp = result_data['temperature']
+                    if isinstance(temp, (int, float)):
+                        st.metric("🌡️ 温度", f"{temp}°C")
+                    else:
+                        st.metric("🌡️ 温度", str(temp))
+                elif 'temp' in result_data:
+                    st.metric("🌡️ 温度", result_data['temp'])
+            
+            with col2:
+                if 'weather' in result_data:
+                    weather = result_data['weather']
+                    weather_emoji = {
+                        '晴': '☀️', 'sunny': '☀️', 'clear': '☀️',
+                        '雨': '🌧️', 'rain': '🌧️', 'rainy': '🌧️',
+                        '阴': '☁️', 'cloudy': '☁️', 'overcast': '☁️',
+                        '雪': '❄️', 'snow': '❄️', 'snowy': '❄️',
+                        '多云': '⛅', 'partly cloudy': '⛅',
+                    }
+                    emoji = weather_emoji.get(weather.lower(), '🌤️')
+                    st.metric("天气", f"{emoji} {weather}")
+                elif 'condition' in result_data:
+                    st.metric("天气状况", result_data['condition'])
+            
+            with col3:
+                if 'humidity' in result_data:
+                    st.metric("💧 湿度", f"{result_data['humidity']}%")
+                elif 'wind' in result_data:
+                    st.metric("💨 风力", result_data['wind'])
+                elif 'city' in result_data:
+                    st.metric("📍 城市", result_data['city'])
+            
+            if 'description' in result_data:
+                st.info(result_data['description'])
+            
+            return True
+    
+    import re
+    temp_match = re.search(r'(\d+)\s*[°度]?\s*[Cc]?', content)
+    weather_match = re.search(r'(晴|雨|阴|雪|多云|sunny|rainy|cloudy|snow)', content, re.IGNORECASE)
+    city_match = re.search(r'([\u4e00-\u9fa5]{2,4})\s*(?:的)?天气', content)
+    
+    if temp_match or weather_match:
+        st.divider()
+        st.subheader("🌤️ 天气信息")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if temp_match:
+                temp = temp_match.group(1)
+                st.metric("🌡️ 温度", f"{temp}°C")
+        
+        with col2:
+            if weather_match:
+                weather = weather_match.group(1)
+                weather_emoji = {
+                    '晴': '☀️', 'sunny': '☀️',
+                    '雨': '🌧️', 'rainy': '🌧️',
+                    '阴': '☁️', 'cloudy': '☁️',
+                    '雪': '❄️', 'snow': '❄️',
+                    '多云': '⛅',
+                }
+                emoji = weather_emoji.get(weather.lower(), '🌤️')
+                st.metric("天气", f"{emoji} {weather}")
+        
+        if city_match:
+            st.caption(f"📍 {city_match.group(1)}")
+        
+        return True
+    
+    return False
+
+
+def render_news_list(content: str, result_data: Optional[Dict] = None):
+    news_keywords = ['新闻', '资讯', '头条', 'news', 'headline']
+    
+    if not any(kw in content.lower() for kw in news_keywords):
+        return False
+    
+    if result_data and isinstance(result_data, dict):
+        items = None
+        if 'news' in result_data:
+            items = result_data['news']
+        elif 'items' in result_data:
+            items = result_data['items']
+        elif 'headlines' in result_data:
+            items = result_data['headlines']
+        
+        if items and isinstance(items, list) and len(items) > 0:
+            st.divider()
+            st.subheader("📰 新闻资讯")
+            
+            for i, item in enumerate(items[:5]):
+                if isinstance(item, dict):
+                    title = item.get('title', item.get('headline', ''))
+                    source = item.get('source', item.get('author', ''))
+                    url = item.get('url', item.get('link', ''))
+                    date = item.get('date', item.get('published', ''))
+                    
+                    with st.container():
+                        st.markdown(f"**{i+1}. {title}**")
+                        if source:
+                            st.caption(f"📰 {source}" + (f" | 📅 {date}" if date else ""))
+                        if url:
+                            st.markdown(f"[查看详情]({url})")
+                        st.markdown("---")
+                elif isinstance(item, str):
+                    st.markdown(f"**{i+1}.** {item}")
+            
+            return True
+    
+    return False
+
+
+def render_price_comparison(content: str, result_data: Optional[Dict] = None):
+    price_keywords = ['价格', '多少钱', '比价', 'price', 'cost']
+    
+    if not any(kw in content.lower() for kw in price_keywords):
+        return False
+    
+    if result_data and isinstance(result_data, dict):
+        prices = result_data.get('prices', result_data.get('items', []))
+        
+        if prices and isinstance(prices, list) and len(prices) > 0:
+            st.divider()
+            st.subheader("💰 价格对比")
+            
+            for item in prices[:5]:
+                if isinstance(item, dict):
+                    name = item.get('name', item.get('product', ''))
+                    price = item.get('price', item.get('cost', 0))
+                    source = item.get('source', item.get('store', ''))
+                    
+                    col1, col2, col3 = st.columns([3, 2, 2])
+                    with col1:
+                        st.write(f"**{name}**")
+                    with col2:
+                        if isinstance(price, (int, float)):
+                            st.metric("价格", f"¥{price}")
+                        else:
+                            st.write(price)
+                    with col3:
+                        if source:
+                            st.caption(f"📍 {source}")
+            
+            return True
+    
+    return False
+
+
+def render_smart_content(content: str, result_data: Optional[Dict] = None):
+    rendered = False
+    
+    if render_weather_card(content, result_data):
+        rendered = True
+    
+    if render_news_list(content, result_data):
+        rendered = True
+    
+    if render_price_comparison(content, result_data):
+        rendered = True
+    
+    if render_map_if_needed(content, result_data):
+        rendered = True
+    
+    if render_data_visualization(result_data):
+        rendered = True
+    
+    return rendered
+
+
 def render_rich_content(content: str):
     image_patterns = [
         r'!\[([^\]]*)\]\(([^)]+)\)',
@@ -245,6 +431,12 @@ if "interaction_count" not in st.session_state:
 if "show_trace" not in st.session_state:
     st.session_state.show_trace = False
 
+if "show_logs" not in st.session_state:
+    st.session_state.show_logs = False
+
+if "current_logs" not in st.session_state:
+    st.session_state.current_logs = []
+
 with st.sidebar:
     st.markdown("""
     <style>
@@ -258,6 +450,7 @@ with st.sidebar:
     
     with st.expander("⚙️ 设置", expanded=False):
         st.session_state.show_trace = st.checkbox("显示执行轨迹", value=False)
+        st.session_state.show_logs = st.checkbox("显示LLM通信日志", value=False)
         st.session_state.show_images = st.checkbox("自动显示图片", value=True)
         st.session_state.show_maps = st.checkbox("显示地图", value=True)
         st.session_state.show_audio = st.checkbox("自动渲染音频播放器", value=True)
@@ -286,11 +479,11 @@ with st.sidebar:
     
     st.divider()
     with st.expander("💡 使用提示", expanded=False):
-        st.caption("• 询问位置信息可显示地图")
-        st.caption("• 发送图片链接可自动展示")
-        st.caption("• 查询价格可显示对比图表")
-        st.caption("• 勾选执行轨迹查看详情")
-        st.caption("• 音频链接自动渲染播放器")
+        st.caption("• 天气查询会显示精美天气卡片")
+        st.caption("• 新闻资讯会自动列表展示")
+        st.caption("• 价格对比会显示对比表格")
+        st.caption("• 位置信息可显示地图")
+        st.caption("• 勾选LLM日志查看通信细节")
 
 st.title("🧠 Neo 智能助手")
 st.caption("基于 ReAct 架构 | 原生 Function Calling | 智能记忆系统")
@@ -320,6 +513,9 @@ if prompt := st.chat_input("请输入指令..."):
     
     with st.chat_message("assistant"):
         progress_placeholder = st.empty()
+        logs_placeholder = st.empty() if st.session_state.show_logs else None
+        
+        st.session_state.current_logs = []
         
         def on_progress(stage: str, message: str):
             icons = {
@@ -330,13 +526,24 @@ if prompt := st.chat_input("请输入指令..."):
             icon = icons.get(stage, "▶️")
             progress_placeholder.info(f"{icon} {message}")
         
+        def on_log(log_type: str, data: dict):
+            log_entry = {"type": log_type, "data": data}
+            st.session_state.current_logs.append(log_entry)
+            
+            if logs_placeholder and st.session_state.show_logs:
+                with logs_placeholder.container():
+                    st.caption(f"📝 **{log_type}**")
+                    st.json(data)
+        
         progress_placeholder.info("🧠 正在思考...")
         
         context = [m for m in st.session_state.messages[:-1] if m["role"] in ["user", "assistant"]]
         
-        result = agent.run(prompt, context=context, on_progress=on_progress)
+        result = agent.run(prompt, context=context, on_progress=on_progress, on_log=on_log)
         
         progress_placeholder.empty()
+        if logs_placeholder:
+            logs_placeholder.empty()
         
         if result["success"]:
             final_response = result["response"]
@@ -349,9 +556,7 @@ if prompt := st.chat_input("请输入指令..."):
                         result_data = item["result"]
                         break
             
-            if result_data:
-                render_map_if_needed(final_response, result_data)
-                render_data_visualization(result_data)
+            render_smart_content(final_response, result_data)
             
             if st.session_state.show_trace and result.get("trace"):
                 with st.expander("📋 执行轨迹", expanded=False):
@@ -364,6 +569,50 @@ if prompt := st.chat_input("请输入指令..."):
                             st.success("✅ 执行成功")
                             with st.expander("查看结果"):
                                 st.json(item["result"])
+            
+            if st.session_state.show_logs and st.session_state.current_logs:
+                with st.expander("📡 LLM通信日志", expanded=False):
+                    for i, log in enumerate(st.session_state.current_logs):
+                        if log["type"] == "request":
+                            st.markdown(f"### 📤 请求 #{log['data'].get('iteration', i+1)}")
+                            
+                            st.markdown("**消息列表:**")
+                            messages = log['data'].get('messages', [])
+                            for j, msg in enumerate(messages):
+                                role = msg.get('role', 'unknown')
+                                role_icon = {'system': '⚙️', 'user': '👤', 'assistant': '🤖', 'tool': '🔧'}.get(role, '📄')
+                                with st.container():
+                                    st.caption(f"{role_icon} **{role}**")
+                                    if msg.get('content_preview'):
+                                        st.text(msg['content_preview'][:500])
+                                    if msg.get('tool_calls'):
+                                        st.caption(f"工具调用: {', '.join([tc['name'] for tc in msg['tool_calls']])}")
+                                    if msg.get('tool_name'):
+                                        st.caption(f"工具: {msg['tool_name']}")
+                            
+                            st.caption(f"**可用工具数:** {len(log['data'].get('tools_available', []))}")
+                            
+                        elif log["type"] == "response":
+                            st.markdown(f"### 📥 响应 #{log['data'].get('iteration', i+1)}")
+                            if log["data"].get("content"):
+                                st.markdown("**LLM思考:**")
+                                st.info(log["data"]["content"])
+                            if log["data"].get("has_tool_calls"):
+                                st.success(f"🔧 决定调用 {log['data'].get('tool_calls_count', 0)} 个工具")
+                        
+                        elif log["type"] == "tool_call":
+                            st.markdown(f"### 🔧 工具调用")
+                            st.markdown(f"**工具:** `{log['data'].get('tool')}`")
+                            st.json(log['data'].get('args', {}))
+                        
+                        elif log["type"] == "tool_result":
+                            status = "✅ 成功" if log["data"].get("success") else "❌ 失败"
+                            st.markdown(f"### {status} 工具结果")
+                            st.caption(f"**工具:** {log['data'].get('tool')}")
+                            with st.expander("查看结果详情"):
+                                st.json(log["data"])
+                        
+                        st.divider()
         else:
             final_response = f"抱歉，任务执行遇到问题: {result['response']}"
             st.error(final_response)

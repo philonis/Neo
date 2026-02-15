@@ -44,6 +44,8 @@ def print_help():
     help_table.add_row("memory", "显示记忆统计")
     help_table.add_row("clear", "清空对话历史")
     help_table.add_row("status", "显示代码保护状态")
+    help_table.add_row("trace", "切换执行轨迹显示")
+    help_table.add_row("logs", "切换LLM通信日志显示")
     
     console.print(help_table)
     
@@ -117,7 +119,20 @@ def on_progress(stage: str, message: str):
     console.print(f"[dim]{icon} {message}[/]")
 
 
-def render_result(result: Dict[str, Any], show_trace: bool = False):
+def on_log(log_type: str, data: dict):
+    if log_type == "response":
+        if data.get("content"):
+            console.print(f"[dim]📥 LLM响应: {data['content'][:100]}...[/]")
+        if data.get("has_tool_calls"):
+            console.print(f"[dim]🔧 调用 {data.get('tool_calls_count', 0)} 个工具[/]")
+    elif log_type == "tool_call":
+        console.print(f"[dim]🔧 工具调用: {data.get('tool')}[/]")
+    elif log_type == "tool_result":
+        status = "✅" if data.get("success") else "❌"
+        console.print(f"[dim]{status} 工具结果: {data.get('tool')}[/]")
+
+
+def render_result(result: Dict[str, Any], show_trace: bool = False, show_logs: bool = False, logs: List = None):
     if result["success"]:
         console.print()
         console.print(Markdown(result["response"]))
@@ -130,6 +145,16 @@ def render_result(result: Dict[str, Any], show_trace: bool = False):
                     console.print(f"    [red]❌ {item['result']['error']}[/]")
                 else:
                     console.print(f"    [green]✅ 执行成功[/]")
+        
+        if show_logs and logs:
+            console.print("\n[dim]📡 LLM通信日志:[/]")
+            for log in logs:
+                if log["type"] == "request":
+                    console.print(f"  [dim]📤 请求 #{log['data'].get('iteration')}[/]")
+                elif log["type"] == "response":
+                    console.print(f"  [dim]📥 响应 #{log['data'].get('iteration')}[/]")
+                elif log["type"] == "tool_call":
+                    console.print(f"  [dim]🔧 工具: {log['data'].get('tool')}[/]")
     else:
         console.print(f"\n[red]❌ {result['response']}[/]")
 
@@ -149,6 +174,8 @@ def main():
     messages: List[Dict[str, str]] = []
     interaction_count = 0
     show_trace = False
+    show_logs = False
+    current_logs = []
     
     while True:
         try:
@@ -188,15 +215,28 @@ def main():
                 console.print(f"[green]✅ 执行轨迹显示已{status}[/]")
                 continue
             
+            if user_input.lower() == "logs":
+                show_logs = not show_logs
+                status = "开启" if show_logs else "关闭"
+                console.print(f"[green]✅ LLM日志显示已{status}[/]")
+                continue
+            
             messages.append({"role": "user", "content": user_input})
             
             context = [m for m in messages[:-1] if m["role"] in ["user", "assistant"]]
             
             console.print("[dim]🧠 正在思考...[/]")
             
-            result = agent.run(user_input, context=context, on_progress=on_progress)
+            current_logs = []
             
-            render_result(result, show_trace=show_trace)
+            def collect_logs(log_type: str, data: dict):
+                current_logs.append({"type": log_type, "data": data})
+                if show_logs:
+                    on_log(log_type, data)
+            
+            result = agent.run(user_input, context=context, on_progress=on_progress, on_log=collect_logs)
+            
+            render_result(result, show_trace=show_trace, show_logs=show_logs, logs=current_logs)
             
             if result["success"]:
                 messages.append({"role": "assistant", "content": result["response"]})

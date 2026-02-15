@@ -117,9 +117,10 @@ class ReActAgent:
 当你认为任务完成时，直接回复用户。
 当需要用户确认时，直接向用户询问，等待用户回复后再继续。"""
 
-    def run(self, user_input: str, context: List[Dict] = None, on_progress: Callable = None) -> Dict:
+    def run(self, user_input: str, context: List[Dict] = None, on_progress: Callable = None, on_log: Callable = None) -> Dict:
         self.execution_trace = []
         self.generated_skills = []
+        self.llm_logs = []
         
         tool_schemas = self._get_tool_schemas_with_create_skill()
         tool_descriptions = self._format_tool_descriptions(tool_schemas)
@@ -130,13 +131,44 @@ class ReActAgent:
             if on_progress:
                 on_progress("thinking", f"思考中... (步骤 {iteration + 1})")
             
+            if on_log:
+                request_messages = []
+                for msg in messages:
+                    msg_preview = {
+                        "role": msg.get("role", "unknown"),
+                    }
+                    if msg.get("content"):
+                        content = msg.get("content", "")
+                        msg_preview["content_preview"] = content[:300] + "..." if len(content) > 300 else content
+                    if msg.get("tool_calls"):
+                        msg_preview["tool_calls"] = [{"name": tc["function"]["name"]} for tc in msg["tool_calls"]]
+                    if msg.get("name"):
+                        msg_preview["tool_name"] = msg.get("name")
+                    request_messages.append(msg_preview)
+                
+                on_log("request", {
+                    "iteration": iteration + 1,
+                    "total_messages": len(messages),
+                    "messages": request_messages,
+                    "tools_available": [t["function"]["name"] for t in tool_schemas]
+                })
+            
             response = self.llm.chat(messages, tools=tool_schemas)
+            
             
             if not response:
                 return self._build_result(False, "LLM 请求失败", messages)
             
             message = response["choices"][0]["message"]
             messages.append(message)
+            
+            if on_log:
+                on_log("response", {
+                    "iteration": iteration + 1,
+                    "content": message.get("content", "")[:500] if message.get("content") else None,
+                    "has_tool_calls": bool(message.get("tool_calls")),
+                    "tool_calls_count": len(message.get("tool_calls", []))
+                })
             
             tool_calls = message.get("tool_calls", [])
             
@@ -156,6 +188,13 @@ class ReActAgent:
                 if on_progress:
                     on_progress("action", f"执行工具: {tool_name}")
                 
+                if on_log:
+                    on_log("tool_call", {
+                        "iteration": iteration + 1,
+                        "tool": tool_name,
+                        "args": tool_args
+                    })
+                
                 if tool_name == "create_skill":
                     result = self._create_skill(tool_args, on_progress)
                 else:
@@ -167,6 +206,14 @@ class ReActAgent:
                     "args": tool_args,
                     "result": result
                 })
+                
+                if on_log:
+                    on_log("tool_result", {
+                        "iteration": iteration + 1,
+                        "tool": tool_name,
+                        "success": result.get("success", False),
+                        "result_preview": str(result)[:300]
+                    })
                 
                 tool_message = {
                     "role": "tool",
