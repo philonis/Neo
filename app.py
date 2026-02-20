@@ -422,6 +422,12 @@ def init_resources():
 
 client, skill_manager, memory, soul, agent, planner = init_resources()
 
+try:
+    from agent_skills.telegram_bot import init_telegram_service
+    telegram_service = init_telegram_service(agent)
+except Exception as e:
+    print(f"Telegram服务初始化跳过: {e}")
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 

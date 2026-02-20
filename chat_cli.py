@@ -168,6 +168,14 @@ def main():
         agent = ReActAgent(client, skill_manager, memory)
         planner = TaskPlanner(client, skill_manager)
     
+    try:
+        from agent_skills.telegram_bot import init_telegram_service
+        telegram_service = init_telegram_service(agent)
+        if telegram_service:
+            console.print("[green]✅ Telegram服务已自动启动[/]")
+    except Exception as e:
+        pass
+    
     skill_names = skill_manager.list_skills()
     print_banner(skill_names)
     
