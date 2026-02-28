@@ -2,4 +2,24 @@ __pycache__/
 *.pyc
 memory/
 .env
+.env.*
 agent_skills/
+
+# 日志文件
+*~
+*.log
+
+# 敏感配置
+credentials.enc
+code_backups/
+skill_index/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

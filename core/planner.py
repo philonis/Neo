@@ -259,5 +259,5 @@ class DynamicPlanner:
             if "```json" in response:
                 response = response.split("```json")[1].split("```")[0]
             return json.loads(response.strip())
-        except:
+        except (json.JSONDecodeError, IndexError, ValueError):
             return {"action": "continue", "new_tasks": remaining_tasks}

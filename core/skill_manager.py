@@ -6,6 +6,7 @@
 2. 渐进式加载: 元数据优先，按需加载详情
 3. 语义搜索: 基于描述匹配技能
 4. 动态创建: 支持运行时创建新技能
+5. 技能索引: 杜绝重复创建，快速定位已有技能
 """
 
 import os
@@ -16,6 +17,7 @@ import re
 from typing import List, Dict, Any, Optional, Callable
 
 from .skill_loader import SkillLoader
+from .skill_index import SkillIndex, get_skill_index
 
 
 class SkillManager:
@@ -25,6 +27,10 @@ class SkillManager:
     支持两种技能格式:
     1. Python技能 (tools/*.py) - 传统格式
     2. SKILL.md技能 (skills/*/SKILL.md) - 渐进式披露格式
+    
+    新增功能:
+    - 技能索引：自动索引所有技能，支持相似度搜索
+    - 重复检测：创建新技能前检查是否已存在相似技能
     """
     
     def __init__(
@@ -41,6 +47,7 @@ class SkillManager:
         self.skill_embeddings: Dict[str, List[str]] = {}
         
         self.md_loader = SkillLoader(md_skills_dir)
+        self.skill_index = get_skill_index()
         
         if not os.path.exists(self.dynamic_dir):
             os.makedirs(self.dynamic_dir)
@@ -185,11 +192,27 @@ class SkillManager:
         except Exception:
             return False
     
+    SAFE_BUILTINS = {
+        'print': print, 'len': len, 'str': str, 'int': int,
+        'float': float, 'list': list, 'dict': dict, 'bool': bool,
+        'tuple': tuple, 'set': set, 'frozenset': frozenset,
+        'True': True, 'False': False, 'None': None,
+        'range': range, 'enumerate': enumerate, 'zip': zip,
+        'min': min, 'max': max, 'sum': sum, 'abs': abs,
+        'sorted': sorted, 'reversed': reversed, 'map': map,
+        'filter': filter, 'any': any, 'all': all,
+        'isinstance': isinstance, 'type': type, 'hasattr': hasattr,
+        'getattr': getattr, 'setattr': setattr, 'delattr': delattr,
+        'open': open, 'json': json, 're': re,
+    }
+    
     def _execute_script(self, script_content: str, params: dict) -> dict:
         local_vars = {"params": params, "result": None}
         
+        safe_globals = {"__builtins__": self.SAFE_BUILTINS}
+        
         try:
-            exec(script_content, {"__builtins__": __builtins__}, local_vars)
+            exec(script_content, safe_globals, local_vars)
             return local_vars.get("result", {"success": True})
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -238,7 +261,46 @@ class SkillManager:
             "source_path": source_path or name
         }
         
+        description = schema["function"].get("description", "")
+        self.skill_index.index_skill(
+            name=real_name,
+            description=description,
+            keywords=self._extract_keywords(description),
+            category=self._infer_category(real_name, description),
+            source_type=source_type,
+            source_path=source_path or name
+        )
+        
         return True
+    
+    def _infer_category(self, name: str, description: str) -> str:
+        """推断技能类别"""
+        name_lower = name.lower()
+        desc_lower = description.lower()
+        
+        if any(kw in name_lower for kw in ["browser", "web", "page"]):
+            return "browser"
+        if any(kw in name_lower for kw in ["desktop", "app", "window"]):
+            return "desktop"
+        if any(kw in name_lower for kw in ["search", "fetch", "read", "get"]):
+            return "acquisition"
+        if any(kw in name_lower for kw in ["write", "save", "notify", "send"]):
+            return "output"
+        if any(kw in name_lower for kw in ["parse", "extract", "transform", "process"]):
+            return "processing"
+        if any(kw in name_lower for kw in ["notes", "memory", "chat"]):
+            return "communication"
+        
+        if any(kw in desc_lower for kw in ["浏览器", "网页", "网站"]):
+            return "browser"
+        if any(kw in desc_lower for kw in ["搜索", "获取", "查询"]):
+            return "acquisition"
+        if any(kw in desc_lower for kw in ["处理", "解析", "转换"]):
+            return "processing"
+        if any(kw in desc_lower for kw in ["保存", "发送", "通知"]):
+            return "output"
+        
+        return "other"
     
     def _build_skill_index(self):
         self.skill_embeddings = {}
@@ -462,8 +524,65 @@ description: |
             lines.append(f"- {type_icon} **{name}**: {desc}")
         return "\n".join(lines)
     
+    def find_similar_skill(self, description: str, threshold: float = 0.7) -> Optional[Dict]:
+        """
+        查找相似技能
+        
+        Args:
+            description: 技能描述
+            threshold: 相似度阈值
+            
+        Returns:
+            如果找到相似技能，返回技能信息；否则返回 None
+        """
+        match = self.skill_index.check_duplicate(description, threshold=threshold)
+        if match:
+            return {
+                "name": match.name,
+                "description": match.description,
+                "score": match.score,
+                "category": match.category,
+                "usage_count": match.usage_count
+            }
+        return None
+    
+    def suggest_skills_for_task(self, task_description: str, top_k: int = 5) -> List[Dict]:
+        """
+        为任务建议技能
+        
+        Args:
+            task_description: 任务描述
+            top_k: 返回数量
+            
+        Returns:
+            建议的技能列表
+        """
+        matches = self.skill_index.search_similar(task_description, top_k=top_k)
+        return [
+            {
+                "name": match.name,
+                "description": match.description,
+                "score": match.score,
+                "category": match.category
+            }
+            for match in matches
+        ]
+    
+    def get_skill_composition_suggestion(self, task_description: str) -> Dict:
+        """
+        获取技能组合建议
+        
+        Args:
+            task_description: 任务描述
+            
+        Returns:
+            组合建议
+        """
+        return self.skill_index.suggest_composition(task_description)
+    
     def reload_skills(self):
         self.skills.clear()
         self.skill_embeddings.clear()
         self.md_loader.clear_cache()
+        self.skill_index.clear_index()
         self._load_all_skills()

@@ -283,7 +283,7 @@ class BrowserController:
                 element = await self.page.query_selector(selector)
                 if element:
                     return selector
-            except:
+            except Exception:
                 continue
         
         return None
@@ -340,7 +340,7 @@ class BrowserController:
                     selector = f"{first['tag']}[name*='{first.get('name', '') or first.get('text', '')[:20]}']"
                     try:
                         await self.page.fill(selector, value)
-                    except:
+                    except Exception:
                         await self.page.type(f"{first['tag']}:nth-of-type({first['index'] + 1})", value)
             
             await self.human_like_delay(0.1, 0.3)

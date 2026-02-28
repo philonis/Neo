@@ -42,21 +42,21 @@ class VectorMemory:
                 with open(self.short_term_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.short_term_memory = OrderedDict(data)
-        except:
+        except (json.JSONDecodeError, IOError, OSError) as e:
             self.short_term_memory = OrderedDict()
         
         try:
             if os.path.exists(self.long_term_file):
                 with open(self.long_term_file, "r", encoding="utf-8") as f:
                     self.long_term_memory = json.load(f)
-        except:
+        except (json.JSONDecodeError, IOError, OSError) as e:
             self.long_term_memory = {}
         
         try:
             if os.path.exists(self.index_file):
                 with open(self.index_file, "r", encoding="utf-8") as f:
                     self.memory_index = json.load(f)
-        except:
+        except (json.JSONDecodeError, IOError, OSError) as e:
             self.memory_index = {}
     
     def _save_to_disk(self):

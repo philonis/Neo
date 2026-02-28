@@ -3,7 +3,7 @@
 
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python Version">
-  <img src="https://img.shields.io/badge/Platform-macOS-lightgrey" alt="Platform">
+  <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20macOS-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
   <img src="https://img.shields.io/badge/Architecture-ReAct-orange" alt="Architecture">
   <img src="https://img.shields.io/badge/AI-Agentic-purple" alt="Agentic AI">
@@ -31,6 +31,13 @@ Neo 采用 ReAct (Reasoning + Acting) 模式工作：
 
 这种架构使 Neo 能够自我修正、动态调整策略，而不是盲目执行预设计划。
 
+#### 📚 技能索引系统（新）
+Neo 现在具备智能技能索引能力：
+- **重复检测**：创建新技能前自动检查是否已存在相似技能
+- **语义搜索**：基于描述匹配相关技能
+- **组合建议**：为复杂任务推荐技能组合方案
+- **使用统计**：记录技能调用频率，优先推荐高频技能
+
 #### 🌐 Browser Agent
 Neo 具备**像真人一样使用浏览器**的能力：
 - 自动导航、点击、填表、登录
@@ -40,15 +47,16 @@ Neo 具备**像真人一样使用浏览器**的能力：
 - 支持凭证加密存储
 
 #### 💻 Desktop Agent
-Neo 可以**像真人一样操作macOS应用**：
-- 启动和激活本地应用（豆包、微信、Safari等）
+Neo 可以**像真人一样操作桌面应用**：
+- 支持 Linux 和 macOS 双平台
+- 启动和激活本地应用
 - 在应用中输入文本、点击按钮
 - 发送快捷键、读取窗口内容
-- 支持40+常用应用
 
 #### 🔧 自主编程能力
 Neo 具备**自我编程进化**的能力：
 - 当发现现有工具无法完成任务时，自动编写新技能
+- 新技能创建前会检查是否已存在相似技能，避免重复
 - 新技能创建后立即可用，无需重启
 - 支持链式调用：搜索 → 获取数据 → 解析 → 返回结果
 - 不会轻易说"无法完成"，而是主动尝试解决问题
@@ -64,9 +72,9 @@ Neo 具备**自我编程进化**的能力：
 |-----|------|
 | `browser_agent` | 🌐 像真人一样使用浏览器 |
 | `browser_agent_save_credentials` | 🔐 保存网站登录凭证 |
-| `desktop_agent` | 💻 像真人一样操作macOS应用 |
+| `desktop_agent` | 💻 像真人一样操作桌面应用 |
 | `desktop_list_common_apps` | 📱 列出支持的常用应用 |
-| `notes_operator` | 📝 macOS 备忘录操作 |
+| `notes_operator` | 📝 备忘录操作 |
 | `web_search` | 🔍 网络搜索 |
 | `http_request` | 🌍 HTTP 请求，获取网页/API 数据 |
 | `rss_fetcher` | 📡 RSS/Atom 订阅解析 |
@@ -96,13 +104,17 @@ Neo/
 ├── app.py                  # Streamlit Web 界面
 ├── chat_cli.py             # 命令行交互模式
 ├── llm_client.py           # LLM 客户端 (支持原生 Function Calling)
+├── code_guard.py           # 代码保护系统
 ├── core/                   # 核心模块
 │   ├── __init__.py
 │   ├── react_agent.py      # ReAct Agent 核心 (含自主编程能力)
 │   ├── planner.py          # 智能任务规划器
 │   ├── memory.py           # 向量记忆系统
 │   ├── skill_manager.py    # 增强型技能管理器（双模式）
+│   ├── skill_index.py      # 技能索引服务（新）
 │   ├── skill_loader.py     # 渐进式技能加载器
+│   ├── skill_composer.py   # 技能组合器（新）
+│   ├── logger.py           # 统一日志模块（新）
 │   └── skill_generator.py  # 动态技能生成器
 ├── skills/                 # 📄 SKILL.md 格式技能（渐进式披露）
 │   ├── web-search/         # 网络搜索
@@ -116,21 +128,31 @@ Neo/
 │   ├── browser_controller.py # Playwright浏览器控制
 │   ├── safety_guard.py     # 安全护栏系统
 │   └── session_manager.py  # 会话和凭证管理
-├── desktop_agent/          # 💻 macOS应用自动化模块
+├── desktop_agent/          # 💻 桌面应用自动化模块
 │   ├── __init__.py
 │   ├── desktop_skill.py    # 主技能入口
 │   ├── app_launcher.py     # 应用启动器
-│   └── ui_agent.py         # UI操作代理
+│   ├── ui_agent.py         # UI操作代理
+│   ├── platform_base.py    # 平台抽象层（新）
+│   ├── linux_impl.py       # Linux 实现（新）
+│   └── macos_impl.py       # macOS 实现（新）
 ├── tools/                  # 系统级内置技能（Python格式）
 │   ├── init_skill.py       # 技能初始化CLI
+│   ├── meta_skills.py      # 元技能（新）
 │   ├── notes_skill.py      # 备忘录操作
 │   ├── chat_skill.py       # 通用聊天工具
 │   ├── search_skill.py     # 网络搜索工具
 │   ├── http_skill.py       # HTTP/RSS/网页提取工具
 │   └── code_guard_skill.py # 代码保护管理
+├── docs/                   # 文档（新）
+│   ├── ARCHITECTURE.md     # 架构设计
+│   ├── SKILL_SYSTEM.md     # 技能系统详解
+│   └── DEVELOPMENT.md      # 开发指南
 ├── agent_skills/           # 动态生成的技能
 ├── extensions/             # 用户扩展模块（沙盒）
 ├── memory/                 # 记忆数据存储
+├── skill_index/            # 技能索引数据（新）
+├── logs/                   # 日志文件（新）
 └── soul/                   # 人格数据存储
 ```
 

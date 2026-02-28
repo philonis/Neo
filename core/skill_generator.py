@@ -291,7 +291,7 @@ class AutonomousAgent:
                 response = response.split("```")[1].split("```")[0]
             
             return json.loads(response.strip())
-        except:
+        except (json.JSONDecodeError, IndexError, ValueError):
             return {"need_new_skill": False, "reason": "解析失败"}
 
     def _execute_with_existing_skills(self, user_input: str) -> Dict:
