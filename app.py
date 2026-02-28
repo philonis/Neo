@@ -1,9 +1,11 @@
 import streamlit as st
 import json
 import re
+import time
 from typing import Optional, Dict, Any, List
 from llm_client import LLMClient
 from core import SkillManager, ReActAgent, TaskPlanner, VectorMemory
+from core.message_sync import MessageSyncService, get_sync_service
 from tools.soul_skill import SoulSkill
 
 st.set_page_config(
@@ -418,13 +420,25 @@ def init_resources():
     soul = SoulSkill()
     agent = ReActAgent(client, skill_manager, memory)
     planner = TaskPlanner(client, skill_manager)
-    return client, skill_manager, memory, soul, agent, planner
+    
+    sync_service = get_sync_service()
+    sync_service.set_agent(agent)
+    
+    return client, skill_manager, memory, soul, agent, planner, sync_service
 
-client, skill_manager, memory, soul, agent, planner = init_resources()
+client, skill_manager, memory, soul, agent, planner, sync_service = init_resources()
 
 try:
-    from agent_skills.telegram_bot import init_telegram_service
+    from agent_skills.telegram_bot import init_telegram_service, TelegramService
     telegram_service = init_telegram_service(agent)
+    if telegram_service:
+        sync_service.set_telegram_service(telegram_service)
+        
+        def handle_telegram_message(chat_id: str, text: str, username: str) -> None:
+            response = sync_service.process_telegram_message(chat_id, text, username)
+            telegram_service.send_rich_message(response, chat_id)
+        
+        telegram_service.set_message_handler(handle_telegram_message)
 except Exception as e:
     print(f"Telegram服务初始化跳过: {e}")
 
@@ -443,6 +457,12 @@ if "show_logs" not in st.session_state:
 if "current_logs" not in st.session_state:
     st.session_state.current_logs = []
 
+if "sync_to_telegram" not in st.session_state:
+    st.session_state.sync_to_telegram = True
+
+if "last_sync_timestamp" not in st.session_state:
+    st.session_state.last_sync_timestamp = 0
+
 with st.sidebar:
     st.markdown("""
     <style>
@@ -460,6 +480,33 @@ with st.sidebar:
         st.session_state.show_images = st.checkbox("自动显示图片", value=True)
         st.session_state.show_maps = st.checkbox("显示地图", value=True)
         st.session_state.show_audio = st.checkbox("自动渲染音频播放器", value=True)
+        st.session_state.sync_to_telegram = st.checkbox("同步消息到 Telegram", value=True)
+    
+    st.divider()
+    
+    with st.expander("📱 Telegram 同步", expanded=False):
+        sync_stats = sync_service.get_stats()
+        if sync_stats['telegram_connected']:
+            st.success("✅ Telegram 已连接")
+        else:
+            st.warning("⚠️ Telegram 未连接")
+        
+        st.metric("总消息数", sync_stats['total_messages'])
+        
+        source_dist = sync_stats['source_distribution']
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Web 消息", source_dist.get('web', 0))
+        with col2:
+            st.metric("Telegram 消息", source_dist.get('telegram', 0))
+        
+        if st.button("🔄 刷新同步消息"):
+            st.session_state.last_sync_timestamp = 0
+            st.rerun()
+        
+        if st.button("🗑️ 清空同步消息"):
+            sync_service.clear_messages()
+            st.rerun()
     
     st.divider()
     with st.expander("🔧 已加载技能", expanded=False):
@@ -492,7 +539,29 @@ with st.sidebar:
         st.caption("• 勾选LLM日志查看通信细节")
 
 st.title("🧠 Neo 智能助手")
-st.caption("基于 ReAct 架构 | 原生 Function Calling | 智能记忆系统")
+st.caption("基于 ReAct 架构 | 原生 Function Calling | 智能记忆系统 | Telegram 同步")
+
+synced_messages = sync_service.get_messages(limit=20, since_timestamp=st.session_state.last_sync_timestamp)
+telegram_messages = [m for m in synced_messages if m.get('source') == 'telegram']
+
+if telegram_messages:
+    with st.expander("📱 Telegram 消息同步", expanded=True):
+        for msg in telegram_messages:
+            source_icon = "📱" if msg['source'] == 'telegram' else "🌐"
+            type_icon = "👤" if msg['type'] == 'user' else "🤖"
+            
+            timestamp_str = time.strftime('%H:%M:%S', time.localtime(msg['timestamp']))
+            
+            if msg['type'] == 'user':
+                st.markdown(f"**{source_icon} {type_icon} 用户** ({timestamp_str})")
+            else:
+                st.markdown(f"**{source_icon} {type_icon} 助手** ({timestamp_str})")
+            
+            st.markdown(f"{msg['content'][:500]}{'...' if len(msg['content']) > 500 else ''}")
+            st.markdown("---")
+        
+        if telegram_messages:
+            st.session_state.last_sync_timestamp = telegram_messages[-1]['timestamp']
 
 for message in st.session_state.messages:
     if message["role"] in ["user", "assistant"]:
@@ -516,6 +585,8 @@ for message in st.session_state.messages:
 if prompt := st.chat_input("请输入指令..."):
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    sync_service.add_user_message(prompt, source="web")
     
     with st.chat_message("assistant"):
         progress_placeholder = st.empty()
@@ -632,6 +703,16 @@ if prompt := st.chat_input("请输入指令..."):
             message_entry["trace"] = result["trace"]
         
         st.session_state.messages.append(message_entry)
+        
+        sync_service.add_assistant_message(final_response, source="web")
+        
+        if st.session_state.sync_to_telegram and sync_service.telegram_service:
+            try:
+                sync_service.telegram_service.send_rich_message(
+                    f"💬 [Web] 用户: {prompt}\n\n🤖 助手: {final_response}"
+                )
+            except Exception as e:
+                print(f"同步到 Telegram 失败: {e}")
         
         memory.add_interaction(
             user_input=prompt,
