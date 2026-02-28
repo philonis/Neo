@@ -343,6 +343,42 @@ class SkillManager:
     def get_skill(self, name: str) -> Optional[Callable]:
         return self.skills.get(name, {}).get("func")
     
+    def has_skill(self, name: str) -> bool:
+        """检查技能是否存在"""
+        return name in self.skills
+    
+    def execute_skill(self, name: str, args: Dict = None) -> Dict:
+        """
+        执行指定技能
+        
+        Args:
+            name: 技能名称
+            args: 参数字典
+            
+        Returns:
+            执行结果
+        """
+        if name not in self.skills:
+            return {"success": False, "error": f"技能 {name} 不存在"}
+        
+        skill = self.skills[name]
+        func = skill.get("func")
+        
+        if not func:
+            return {"success": False, "error": f"技能 {name} 没有可执行函数"}
+        
+        try:
+            result = func(args or {})
+            
+            self.skill_index.record_usage(name)
+            
+            if isinstance(result, dict):
+                return result
+            else:
+                return {"success": True, "result": result}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
     def get_skill_info(self, name: str) -> Optional[Dict]:
         skill = self.skills.get(name)
         if skill:

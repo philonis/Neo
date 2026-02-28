@@ -463,6 +463,18 @@ if "sync_to_telegram" not in st.session_state:
 if "last_sync_timestamp" not in st.session_state:
     st.session_state.last_sync_timestamp = 0
 
+if "auto_refresh" not in st.session_state:
+    st.session_state.auto_refresh = True
+
+if "refresh_interval" not in st.session_state:
+    st.session_state.refresh_interval = 5
+
+if "pending_plan" not in st.session_state:
+    st.session_state.pending_plan = None
+
+if "plan_confirmed" not in st.session_state:
+    st.session_state.plan_confirmed = False
+
 with st.sidebar:
     st.markdown("""
     <style>
@@ -507,6 +519,25 @@ with st.sidebar:
         if st.button("🗑️ 清空同步消息"):
             sync_service.clear_messages()
             st.rerun()
+        
+        st.divider()
+        st.session_state.auto_refresh = st.checkbox("自动刷新", value=True)
+        st.session_state.refresh_interval = st.slider("刷新间隔(秒)", 3, 30, st.session_state.refresh_interval)
+        
+        if st.session_state.auto_refresh:
+            time.sleep(0.1)
+            if 'refresh_counter' not in st.session_state:
+                st.session_state.refresh_counter = 0
+            st.session_state.refresh_counter += 1
+            
+            st.markdown(f"""
+            <script>
+            setTimeout(function() {{
+                window.location.reload();
+            }}, {st.session_state.refresh_interval * 1000});
+            </script>
+            """, unsafe_allow_html=True)
+            st.caption(f"⏱️ {st.session_state.refresh_interval}秒后自动刷新")
     
     st.divider()
     with st.expander("🔧 已加载技能", expanded=False):
@@ -588,35 +619,164 @@ if prompt := st.chat_input("请输入指令..."):
     
     sync_service.add_user_message(prompt, source="web")
     
-    with st.chat_message("assistant"):
-        progress_placeholder = st.empty()
-        logs_placeholder = st.empty() if st.session_state.show_logs else None
-        
-        st.session_state.current_logs = []
-        
-        def on_progress(stage: str, message: str):
-            icons = {
-                "thinking": "🧠",
-                "action": "⚡",
-                "observation": "👁️"
-            }
-            icon = icons.get(stage, "▶️")
-            progress_placeholder.info(f"{icon} {message}")
-        
-        def on_log(log_type: str, data: dict):
-            log_entry = {"type": log_type, "data": data}
-            st.session_state.current_logs.append(log_entry)
+    is_plan_mode = prompt.strip().startswith("/plan")
+    is_confirm = prompt.strip().lower() in ["/confirm", "/执行", "/确认", "确认执行", "执行"]
+    is_cancel = prompt.strip().lower() in ["/cancel", "/取消", "/放弃", "取消执行", "放弃"]
+    
+    if is_plan_mode:
+        with st.chat_message("assistant"):
+            st.info("📋 **规划模式** - 正在生成行动计划...")
             
-            if logs_placeholder and st.session_state.show_logs:
-                with logs_placeholder.container():
-                    st.caption(f"📝 **{log_type}**")
-                    st.json(data)
-        
-        progress_placeholder.info("🧠 正在思考...")
-        
-        context = [m for m in st.session_state.messages[:-1] if m["role"] in ["user", "assistant"]]
-        
-        result = agent.run(prompt, context=context, on_progress=on_progress, on_log=on_log)
+            plan_prompt = prompt.strip()[5:].strip() if len(prompt.strip()) > 5 else "请描述你想要完成的任务"
+            
+            if plan_prompt == "请描述你想要完成的任务":
+                st.warning("请在 /plan 后描述你想要完成的任务，例如：`/plan 帮我分析最近一周的科技新闻`")
+            else:
+                plan_result = planner.create_plan(plan_prompt)
+                
+                if plan_result.get("success"):
+                    plan = plan_result.get("plan", {})
+                    st.session_state.pending_plan = plan
+                    
+                    st.markdown("## 📋 行动计划")
+                    st.markdown(f"**目标**: {plan.get('goal', plan_prompt)}")
+                    st.markdown("---")
+                    
+                    steps = plan.get("steps", [])
+                    for i, step in enumerate(steps):
+                        with st.container():
+                            st.markdown(f"### 步骤 {i+1}: {step.get('action', '未知操作')}")
+                            st.markdown(f"- **工具**: `{step.get('tool', '未指定')}`")
+                            st.markdown(f"- **参数**: `{step.get('args', {})}`")
+                            st.markdown(f"- **说明**: {step.get('description', '无说明')}")
+                            st.markdown("---")
+                    
+                    st.info("💡 确认执行请输入 `/confirm`，取消请输入 `/cancel`，或继续讨论修改计划")
+                else:
+                    st.error(f"生成计划失败: {plan_result.get('error', '未知错误')}")
+    
+    elif is_confirm and st.session_state.pending_plan:
+        with st.chat_message("assistant"):
+            st.success("✅ 开始执行计划...")
+            
+            plan = st.session_state.pending_plan
+            steps = plan.get("steps", [])
+            results = []
+            
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            for i, step in enumerate(steps):
+                status_text.info(f"执行步骤 {i+1}/{len(steps)}: {step.get('action', '')}")
+                
+                tool_name = step.get("tool")
+                tool_args = step.get("args", {})
+                
+                if skill_manager.has_skill(tool_name):
+                    try:
+                        step_result = skill_manager.execute_skill(tool_name, tool_args)
+                        results.append({
+                            "step": i + 1,
+                            "tool": tool_name,
+                            "success": step_result.get("success", False),
+                            "result": step_result
+                        })
+                    except Exception as e:
+                        results.append({
+                            "step": i + 1,
+                            "tool": tool_name,
+                            "success": False,
+                            "error": str(e)
+                        })
+                else:
+                    results.append({
+                        "step": i + 1,
+                        "tool": tool_name,
+                        "success": False,
+                        "error": f"工具 {tool_name} 不存在"
+                    })
+                
+                progress_bar.progress((i + 1) / len(steps))
+            
+            status_text.empty()
+            progress_bar.empty()
+            
+            st.markdown("## 📊 执行结果")
+            for r in results:
+                if r["success"]:
+                    st.success(f"✅ 步骤 {r['step']}: `{r['tool']}` 执行成功")
+                else:
+                    st.error(f"❌ 步骤 {r['step']}: `{r['tool']}` 执行失败 - {r.get('error', '未知错误')}")
+            
+            st.session_state.pending_plan = None
+            st.session_state.plan_confirmed = False
+    
+    elif is_cancel:
+        with st.chat_message("assistant"):
+            if st.session_state.pending_plan:
+                st.warning("🚫 已取消执行计划")
+                st.session_state.pending_plan = None
+            else:
+                st.info("没有待执行的计划")
+    
+    elif st.session_state.pending_plan and not is_plan_mode:
+        with st.chat_message("assistant"):
+            st.info("📝 正在根据您的反馈修改计划...")
+            
+            current_plan = st.session_state.pending_plan
+            modify_result = planner.modify_plan(current_plan, prompt)
+            
+            if modify_result.get("success"):
+                st.session_state.pending_plan = modify_result.get("plan")
+                plan = st.session_state.pending_plan
+                
+                st.markdown("## 📋 修改后的行动计划")
+                st.markdown(f"**目标**: {plan.get('goal', '')}")
+                st.markdown("---")
+                
+                steps = plan.get("steps", [])
+                for i, step in enumerate(steps):
+                    with st.container():
+                        st.markdown(f"### 步骤 {i+1}: {step.get('action', '未知操作')}")
+                        st.markdown(f"- **工具**: `{step.get('tool', '未指定')}`")
+                        st.markdown(f"- **参数**: `{step.get('args', {})}`")
+                        st.markdown(f"- **说明**: {step.get('description', '无说明')}")
+                        st.markdown("---")
+                
+                st.info("💡 确认执行请输入 `/confirm`，取消请输入 `/cancel`，或继续讨论修改计划")
+            else:
+                st.error(f"修改计划失败: {modify_result.get('error', '未知错误')}")
+    
+    else:
+        with st.chat_message("assistant"):
+            progress_placeholder = st.empty()
+            logs_placeholder = st.empty() if st.session_state.show_logs else None
+            
+            st.session_state.current_logs = []
+            
+            def on_progress(stage: str, message: str):
+                icons = {
+                    "thinking": "🧠",
+                    "action": "⚡",
+                    "observation": "👁️"
+                }
+                icon = icons.get(stage, "▶️")
+                progress_placeholder.info(f"{icon} {message}")
+            
+            def on_log(log_type: str, data: dict):
+                log_entry = {"type": log_type, "data": data}
+                st.session_state.current_logs.append(log_entry)
+                
+                if logs_placeholder and st.session_state.show_logs:
+                    with logs_placeholder.container():
+                        st.caption(f"📝 **{log_type}**")
+                        st.json(data)
+            
+            progress_placeholder.info("🧠 正在思考...")
+            
+            context = [m for m in st.session_state.messages[:-1] if m["role"] in ["user", "assistant"]]
+            
+            result = agent.run(prompt, context=context, on_progress=on_progress, on_log=on_log)
         
         progress_placeholder.empty()
         if logs_placeholder:

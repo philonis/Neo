@@ -184,6 +184,202 @@ class TaskPlanner:
         analysis = self.analyze_complexity(user_input)
         return analysis["level"] in ["medium", "complex"]
 
+    def create_plan(self, user_input: str, context: List[Dict] = None) -> Dict:
+        """
+        创建行动计划（用于 /plan 命令）
+        
+        Args:
+            user_input: 用户输入的任务描述
+            context: 对话上下文
+            
+        Returns:
+            {
+                "success": bool,
+                "plan": {
+                    "goal": "任务目标",
+                    "steps": [
+                        {
+                            "action": "动作描述",
+                            "tool": "工具名称",
+                            "args": {"参数": "值"},
+                            "description": "详细说明"
+                        }
+                    ]
+                },
+                "error": "错误信息（如果失败）"
+            }
+        """
+        tool_list = self._get_tool_list()
+        
+        prompt = f"""你是一个任务规划专家。请为用户任务创建详细的行动计划。
+
+## 用户任务
+{user_input}
+
+## 可用工具
+{tool_list}
+
+## 规划要求
+1. 创建清晰、可执行的步骤序列
+2. 每个步骤必须指定使用的工具和参数
+3. 步骤之间应该有逻辑顺序
+4. 考虑可能的错误处理
+
+## 输出格式
+请以 JSON 格式输出计划:
+```json
+{{
+    "goal": "任务的总体目标",
+    "steps": [
+        {{
+            "action": "动作简述",
+            "tool": "工具名称",
+            "args": {{"参数名": "参数值"}},
+            "description": "这一步要做什么，为什么需要这一步"
+        }}
+    ]
+}}
+```
+
+只输出 JSON，不要有其他内容。"""
+
+        response = self.llm.simple_chat(prompt)
+        
+        if not response:
+            return {
+                "success": False,
+                "error": "LLM 未返回响应",
+                "plan": None
+            }
+        
+        try:
+            json_str = response
+            if "```json" in json_str:
+                json_str = json_str.split("```json")[1].split("```")[0]
+            elif "```" in json_str:
+                json_str = json_str.split("```")[1].split("```")[0]
+            
+            plan_data = json.loads(json_str.strip())
+            
+            if "steps" not in plan_data:
+                plan_data["steps"] = [{
+                    "action": "执行任务",
+                    "tool": "chat",
+                    "args": {},
+                    "description": user_input
+                }]
+            
+            if "goal" not in plan_data:
+                plan_data["goal"] = user_input
+            
+            return {
+                "success": True,
+                "plan": plan_data
+            }
+        except (json.JSONDecodeError, KeyError, IndexError) as e:
+            return {
+                "success": False,
+                "error": f"解析计划失败: {e}",
+                "plan": {
+                    "goal": user_input,
+                    "steps": [{
+                        "action": "执行任务",
+                        "tool": "chat",
+                        "args": {},
+                        "description": user_input
+                    }]
+                }
+            }
+
+    def modify_plan(self, current_plan: Dict, user_feedback: str) -> Dict:
+        """
+        根据用户反馈修改计划
+        
+        Args:
+            current_plan: 当前计划
+            user_feedback: 用户反馈
+            
+        Returns:
+            {
+                "success": bool,
+                "plan": 修改后的计划,
+                "error": "错误信息（如果失败）"
+            }
+        """
+        tool_list = self._get_tool_list()
+        
+        prompt = f"""你是一个任务规划专家。用户对当前计划有反馈，请根据反馈修改计划。
+
+## 当前计划
+目标: {current_plan.get('goal', '')}
+步骤:
+{json.dumps(current_plan.get('steps', []), ensure_ascii=False, indent=2)}
+
+## 用户反馈
+{user_feedback}
+
+## 可用工具
+{tool_list}
+
+## 修改要求
+1. 根据用户反馈调整计划
+2. 保持 JSON 格式不变
+3. 可以添加、删除或修改步骤
+4. 确保修改后的计划仍然可执行
+
+## 输出格式
+请以 JSON 格式输出修改后的计划:
+```json
+{{
+    "goal": "任务的总体目标",
+    "steps": [
+        {{
+            "action": "动作简述",
+            "tool": "工具名称",
+            "args": {{"参数名": "参数值"}},
+            "description": "这一步要做什么"
+        }}
+    ]
+}}
+```
+
+只输出 JSON，不要有其他内容。"""
+
+        response = self.llm.simple_chat(prompt)
+        
+        if not response:
+            return {
+                "success": False,
+                "error": "LLM 未返回响应",
+                "plan": current_plan
+            }
+        
+        try:
+            json_str = response
+            if "```json" in json_str:
+                json_str = json_str.split("```json")[1].split("```")[0]
+            elif "```" in json_str:
+                json_str = json_str.split("```")[1].split("```")[0]
+            
+            plan_data = json.loads(json_str.strip())
+            
+            if "steps" not in plan_data:
+                plan_data["steps"] = current_plan.get("steps", [])
+            
+            if "goal" not in plan_data:
+                plan_data["goal"] = current_plan.get("goal", "")
+            
+            return {
+                "success": True,
+                "plan": plan_data
+            }
+        except (json.JSONDecodeError, KeyError, IndexError) as e:
+            return {
+                "success": False,
+                "error": f"解析修改后的计划失败: {e}",
+                "plan": current_plan
+            }
+
 
 class DynamicPlanner:
     """
